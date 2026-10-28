@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IRIS – AI Vision Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600;700&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #03060d; --panel: rgba(12, 20, 36, 0.72); --panel2: rgba(20, 32, 56, 0.7);
+    --text: #e8f1ff; --muted: #7f93b3; --cyan: #22e4ff; --violet: #8b5cf6; --border: rgba(34, 228, 255, 0.18);
+    --danger: #ff4d6d; --ok: #2ef2a6; --amber: #ffc83d;
+    --mono: "JetBrains Mono", ui-monospace, monospace; --display: "Orbitron", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: "Inter", system-ui, sans-serif; color: var(--text); background: var(--bg); overflow-x: hidden; }
+  body::before { content: ""; position: fixed; inset: -50%; z-index: -2;
+    background-image: linear-gradient(rgba(34,228,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(34,228,255,.06) 1px, transparent 1px);
+    background-size: 46px 46px; transform: perspective(600px) rotateX(55deg); animation: gridmove 14s linear infinite; }
+  @keyframes gridmove { to { background-position: 0 460px; } }
+  body::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: radial-gradient(circle at 15% 10%, rgba(139,92,246,.25), transparent 35%),
+                radial-gradient(circle at 85% 20%, rgba(34,228,255,.18), transparent 35%),
+                radial-gradient(circle at 50% 110%, rgba(34,228,255,.15), transparent 40%); }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 18px 16px 40px; }
+  .status { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-bottom: 16px; }
+  .status b { color: var(--ok); }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 6px; box-shadow: 0 0 10px var(--ok); animation: blink 1.4s infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+
+  header { display: flex; align-items: center; justify-content: center; gap: 18px; margin-bottom: 18px; animation: rise .8s ease both; }
+  .iris { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
+  .iris .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--cyan); border-bottom-color: var(--violet); animation: spin 3s linear infinite; }
+  .iris .ring.r2 { inset: 8px; border-top-color: var(--violet); border-bottom-color: var(--cyan); animation-duration: 2s; animation-direction: reverse; }
+  .iris .core { position: absolute; inset: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff 0 6%, var(--cyan) 18%, #0a5e8a 55%, #02101e 75%);
+                box-shadow: 0 0 24px var(--cyan); animation: breathe 2.6s ease-in-out infinite; }
+  .iris.busy .core { animation-duration: .7s; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes breathe { 50% { transform: scale(1.15); box-shadow: 0 0 44px var(--cyan); } }
+  h1 { font-family: var(--display); font-size: 38px; margin: 0; letter-spacing: 8px; font-weight: 800;
+       background: linear-gradient(90deg, var(--cyan), #fff, var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent;
+       background-size: 200% auto; animation: shine 4s linear infinite; }
+  @keyframes shine { to { background-position: 200% center; } }
+  .tag { font-family: var(--mono); color: var(--cyan); font-size: 11px; letter-spacing: 3px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .panel { position: relative; background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 18px;
+           backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); animation: rise .7s ease both; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  .label { font-family: var(--mono); font-size: 11px; color: var(--cyan); letter-spacing: 2px; margin: 14px 0 8px; display: block; }
+  .label:first-child { margin-top: 0; }
+  details.settings summary { cursor: pointer; font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: 1px; margin-bottom: 4px; }
+  input[type=password], input[type=text] { width: 100%; padding: 13px; border-radius: 12px; border: 1px solid var(--border); background: rgba(3,6,13,.7);
+    color: var(--text); font-size: 15px; font-family: var(--mono); outline: none; transition: border-color .2s, box-shadow .2s; }
+  input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(34,228,255,.15); }
+
+  .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .mode { background: var(--panel2); border: 1px solid var(--border); color: var(--text); border-radius: 12px; padding: 10px 4px; font-size: 11px; font-weight: 600;
+          cursor: pointer; font-family: var(--mono); letter-spacing: 1px; transition: transform .2s, border-color .2s, box-shadow .2s; }
+  .mode span { display: block; font-size: 22px; margin-bottom: 4px; }
+  .mode:hover { transform: translateY(-3px); border-color: var(--cyan); }
+  .mode.active { border-color: var(--cyan); box-shadow: 0 0 22px rgba(34,228,255,.35), inset 0 0 20px rgba(34,228,255,.12); }
+
+  .stage { position: relative; background: #000; border-radius: 14px; overflow: hidden; aspect-ratio: 4/3; display: grid; place-items: center; border: 1px solid var(--border); }
+  .stage video, .stage img { width: 100%; height: 100%; object-fit: contain; display: none; }
+  .stage .hint { font-family: var(--mono); color: var(--muted); font-size: 13px; letter-spacing: 1px; text-align: center; padding: 20px; }
+  .corner { position: absolute; width: 26px; height: 26px; border: 3px solid var(--cyan); z-index: 2; filter: drop-shadow(0 0 6px var(--cyan)); transition: border-color .3s; }
+  .tl { top: 10px; left: 10px; border-right: 0; border-bottom: 0; } .tr { top: 10px; right: 10px; border-left: 0; border-bottom: 0; }
+  .bl { bottom: 10px; left: 10px; border-right: 0; border-top: 0; } .br { bottom: 10px; right: 10px; border-left: 0; border-top: 0; }
+  .stage.bad .corner { border-color: var(--amber); filter: drop-shadow(0 0 6px var(--amber)); }
+  .hud { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 11px; color: var(--cyan); letter-spacing: 2px; z-index: 2;
+         background: rgba(0,0,0,.55); padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
+  .meters { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: none; gap: 8px; z-index: 2; }
+  .meters span { font-family: var(--mono); font-size: 10px; letter-spacing: 1px; padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,.6); }
+  .good { color: var(--ok); } .warnc { color: var(--amber); }
+  .scan { position: absolute; left: 0; right: 0; height: 80px; top: -80px; display: none; z-index: 1;
+          background: linear-gradient(to bottom, transparent, rgba(34,228,255,.35), transparent); border-bottom: 2px solid var(--cyan); animation: scan 1.4s linear infinite; }
+  @keyframes scan { to { top: 100%; } }
+  .guide { margin-top: 10px; font-size: 14px; line-height: 1.5; color: var(--amber); min-height: 21px; font-family: var(--mono); }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .ghost { background: var(--panel2); border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 600;
+           cursor: pointer; text-align: center; font-family: var(--mono); transition: border-color .2s, transform .2s; }
+  .ghost:hover { border-color: var(--cyan); transform: translateY(-2px); }
+  .ghost input { display: none; }
+  .btn { margin-top: 12px; width: 100%; padding: 16px; border: 0; border-radius: 14px; cursor: pointer; font-family: var(--display); font-weight: 800; font-size: 16px; letter-spacing: 4px;
+         color: #02101e; background: linear-gradient(90deg, var(--cyan), var(--violet), var(--cyan)); background-size: 200% auto; animation: shine 3s linear infinite;
+         box-shadow: 0 0 30px rgba(34,228,255,.4); transition: transform .15s; }
+  .btn:hover { transform: translateY(-2px) scale(1.01); }
+  .btn:disabled { opacity: .6; cursor: wait; }
+
+  /* Chat */
+  .chat-panel { display: flex; flex-direction: column; height: 100%; min-height: 560px; }
+  .chat-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .lang { display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .lang button { background: transparent; color: var(--muted); border: 0; padding: 7px 12px; font-family: var(--mono); font-size: 12px; cursor: pointer; }
+  .lang button.on { background: rgba(34,228,255,.15); color: var(--cyan); }
+  .msgs { flex: 1; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 10px; max-height: 520px; }
+  .msg { max-width: 88%; padding: 12px 14px; border-radius: 14px; line-height: 1.55; animation: rise .35s ease both; font-size: 15px; }
+  .msg.user { align-self: flex-end; background: rgba(139,92,246,.22); border: 1px solid rgba(139,92,246,.4); border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: var(--panel2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .msg.sys { align-self: center; font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 1px; background: transparent; padding: 2px; }
+  .msg .who { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--cyan); margin-bottom: 4px; }
+  .msg img { max-width: 160px; border-radius: 8px; display: block; margin-top: 6px; }
+  .msg .main { font-size: 17px; font-weight: 600; }
+  .msg .gd { margin-top: 8px; color: var(--amber); font-size: 14px; }
+  .msg .wr { margin-top: 8px; color: #ff9aae; font-size: 14px; }
+  .msg details { margin-top: 8px; font-size: 14px; color: var(--muted); }
+  .msg details summary { cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: 1px; }
+  .msg ul { margin: 6px 0 0; padding-inline-start: 18px; }
+  .msg .tools { margin-top: 8px; display: flex; gap: 6px; }
+  .msg .tools button { background: transparent; border: 1px solid var(--border); color: var(--cyan); border-radius: 8px; padding: 4px 8px; font-size: 11px; font-family: var(--mono); cursor: pointer; }
+  .rtl { direction: rtl; text-align: right; font-family: "Noto Nastaliq Urdu", "Inter", serif; line-height: 2.1; }
+  .typing { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); display: inline-block; animation: bounce 1s infinite; }
+  .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 50% { transform: translateY(-6px); opacity: .4; } }
+  .bar { height: 3px; background: var(--border); border-radius: 3px; margin-top: 8px; overflow: hidden; width: 220px; }
+  .bar div { height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan), var(--violet)); transition: width .3s linear; }
+
+  .quick { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 8px; }
+  .quick button { background: var(--panel2); border: 1px solid var(--border); color: var(--text); border-radius: 999px; padding: 7px 12px; font-size: 12px; font-family: var(--mono); cursor: pointer; }
+  .quick button:hover { border-color: var(--cyan); }
+  .composer { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; }
+  .mic { width: 50px; border-radius: 12px; border: 1px solid var(--border); background: var(--panel2); font-size: 20px; cursor: pointer; transition: all .2s; }
+  .mic.live { background: var(--danger); border-color: var(--danger); box-shadow: 0 0 0 0 rgba(255,77,109,.6); animation: ping 1.2s infinite; }
+  @keyframes ping { 70% { box-shadow: 0 0 0 14px rgba(255,77,109,0); } }
+  .send { padding: 0 16px; border-radius: 12px; border: 0; background: var(--cyan); color: #02101e; font-weight: 800; cursor: pointer; font-family: var(--mono); }
+  .note { color: var(--muted); font-size: 11px; text-align: center; margin-top: 16px; font-family: var(--mono); letter-spacing: 1px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="status">
+    <span><span class="dot"></span>SYSTEM <b>ONLINE</b></span>
+    <span>MODEL: GEMMA-4 · OPEN-WEIGHT</span>
+    <span>⌨ SPACE = TALK · R = REPEAT · C = CAPTURE</span>
+    <span id="clock">--:--:--</span>
+  </div>
+
+  <header>
+    <div class="iris" id="logo"><div class="ring"></div><div class="ring r2"></div><div class="core"></div></div>
+    <div><h1>IRIS</h1><div class="tag">// TALKING AI EYES FOR THE VISUALLY IMPAIRED</div></div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: camera -->
+    <div class="panel">
+      <details class="settings" id="keyBox">
+        <summary>⚙ API KEY SETTINGS</summary>
+        <input id="key" type="password" placeholder="Paste your Gemini API key here">
+      </details>
+
+      <span class="label">01 // MODE</span>
+      <div class="modes">
+        <button class="mode active" data-mode="describe"><span>🏞️</span>DESCRIBE</button>
+        <button class="mode" data-mode="read"><span>📄</span>READ</button>
+        <button class="mode" data-mode="medicine"><span>💊</span>MEDICINE</button>
+        <button class="mode" data-mode="money"><span>💵</span>MONEY</button>
+      </div>
+
+      <span class="label">02 // VISUAL INPUT</span>
+      <div class="stage" id="stage">
+        <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+        <div class="hud" id="hud">STANDBY</div>
+        <div class="hint" id="hint">[ CAMERA OFFLINE ]<br>Turn on the camera or upload a photo</div>
+        <video id="video" autoplay playsinline muted></video>
+        <img id="shot" alt="Captured image">
+        <div class="meters" id="meters"><span id="mLight">LIGHT: --</span><span id="mSteady">STEADY: --</span></div>
+        <div class="scan" id="scan"></div>
+      </div>
+      <div class="guide" id="guide"></div>
+      <div class="row">
+        <button class="ghost" id="camBtn">📷 CAMERA ON</button>
+        <label class="ghost" for="upload">🖼️ UPLOAD<input id="upload" type="file" accept="image/*" capture="environment"></label>
+      </div>
+      <button id="go" class="btn">SEE FOR ME</button>
+    </div>
+
+    <!-- RIGHT: chat -->
+    <div class="panel chat-panel">
+      <div class="chat-top">
+        <span class="label" style="margin:0">03 // CONVERSATION</span>
+        <div class="lang"><button id="lEn" class="on">ENGLISH</button><button id="lUr">اردو</button></div>
+      </div>
+      <div class="msgs" id="msgs"></div>
+      <div class="quick">
+        <button id="qRepeat">🔁 Repeat</button>
+        <button id="qDetails">📋 Read details</button>
+        <button data-q="What is the expiry date?">📅 Expiry date?</button>
+        <button data-q="Is there anything dangerous in front of me?">⚠️ Any danger?</button>
+      </div>
+      <div class="composer">
+        <button class="mic" id="mic" title="Talk (Space)">🎤</button>
+        <input id="question" type="text" placeholder="Ask anything… or press 🎤 and speak">
+        <button class="send" id="send">SEND</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">IRIS is an assistant, not a replacement for a doctor, pharmacist or white cane.<br>Built at Hacktoberfest 2026 · ACM UET New Campus · Open source</p>
+</div>
+
+<script>
+  const MODEL = "gemma-4-26b-a4b-it";
+  const $ = (id) => document.getElementById(id);
+
+  let mode = "describe";
+  let lang = "en";          // "en" or "ur"
+  let image = null;         // current image { base64, mimeType, url }
+  let stream = null;
+  let history = [];         // conversation sent to Gemma
+  let lastReply = null;     // for "repeat"
+  let busy = false;
+  let monitor = null;
+
+  // ================= TEXTS (English / Urdu / Urdu-for-speech in Devanagari) =================
+  const T = {
+    hello:   { en: "Hello, I am IRIS. Turn on the camera, hold something in front of it, and press See For Me. You can also ask me questions.",
+               ur: "السلام علیکم، میں آئرس ہوں۔ کیمرا چالو کریں، کوئی چیز سامنے رکھیں اور سی فار می دبائیں۔ آپ مجھ سے سوال بھی پوچھ سکتے ہیں۔",
+               hi: "अस्सलामु अलैकुम, मैं आइरिस हूं। कैमरा चालू करें, कोई चीज़ सामने रखें और सी फ़ॉर मी दबाएं। आप मुझ से सवाल भी पूछ सकते हैं।" },
+    guide: {
+      describe: { en: "Camera on. Hold the camera at chest height and point it straight ahead. Keep it still.",
+                  ur: "کیمرا چالو ہے۔ کیمرے کو سینے کی اونچائی پر سیدھا سامنے رکھیں اور ہلائیں نہیں۔",
+                  hi: "कैमरा चालू है। कैमरे को सीने की ऊंचाई पर सीधा सामने रखें और हिलाएं नहीं।" },
+      read:     { en: "Camera on. Hold the paper flat, about one foot from the camera, in good light. Keep it still.",
+                  ur: "کیمرا چالو ہے۔ کاغذ کو سیدھا، کیمرے سے تقریباً ایک فٹ دور، روشنی میں رکھیں اور ہلائیں نہیں۔",
+                  hi: "कैमरा चालू है। काग़ज़ को सीधा, कैमरे से तक़रीबन एक फ़ुट दूर, रौशनी में रखें और हिलाएं नहीं।" },
+      medicine: { en: "Camera on. Hold the medicine box about eight inches from the camera. Turn it slowly so the name side faces the camera.",
+                  ur: "کیمرا چالو ہے۔ دوا کا ڈبہ کیمرے سے تقریباً آٹھ انچ دور رکھیں اور آہستہ آہستہ گھمائیں تاکہ نام والا حصہ سامنے آئے۔",
+                  hi: "कैमरा चालू है। दवा का डिब्बा कैमरे से तक़रीबन आठ इंच दूर रखें और आहिस्ता आहिस्ता घुमाएं ताकि नाम वाला हिस्सा सामने आए।" },
+      money:    { en: "Camera on. Place the notes flat, side by side, about one foot from the camera.",
+                  ur: "کیمرا چالو ہے۔ نوٹ سیدھے، ایک دوسرے کے ساتھ، کیمرے سے تقریباً ایک فٹ دور رکھیں۔",
+                  hi: "कैमरा चालू है। नोट सीधे, एक दूसरे के साथ, कैमरे से तक़रीबन एक फ़ुट दूर रखें।" }
+    },
+    dark:   { en: "Too dark. Please move to a brighter place.", ur: "روشنی کم ہے، روشن جگہ پر جائیں۔", hi: "रौशनी कम है, रौशन जगह पर जाएं।" },
+    shaky:  { en: "Hold the camera steady.", ur: "کیمرا ساکن رکھیں۔", hi: "कैमरा साकिन रखें।" },
+    ready:  { en: "Good. The picture is clear. Press See For Me.", ur: "ٹھیک ہے، تصویر صاف ہے۔ سی فار می دبائیں۔", hi: "ठीक है, तस्वीर साफ़ है। सी फ़ॉर मी दबाएं।" },
+    noimg:  { en: "Please turn on the camera or upload a photo first.", ur: "پہلے کیمرا چالو کریں یا تصویر اپلوڈ کریں۔", hi: "पहले कैमरा चालू करें या तस्वीर अपलोड करें।" },
+    nothing:{ en: "There is nothing to repeat yet.", ur: "ابھی دہرانے کے لیے کچھ نہیں ہے۔", hi: "अभी दोहराने के लिए कुछ नहीं है।" },
+    error:  { en: "Sorry, something went wrong. Please try again.", ur: "معاف کیجیے، کچھ غلط ہو گیا۔ دوبارہ کوشش کریں۔", hi: "माफ़ कीजिए, कुछ ग़लत हो गया। दोबारा कोशिश करें।" }
+  };
+  const waitMsg = (s) => ({ en: `Analyzing. Please wait about ${s} seconds.`, ur: `دیکھ رہا ہوں۔ تقریباً ${s} سیکنڈ انتظار کریں۔`, hi: `देख रहा हूं। तक़रीबन ${s} सेकंड इंतज़ार करें।` });
+
+  const MODE_TASK = {
+    describe: "Describe the scene for a blind person: what is in front of them, where things are (left, right, ahead, near, far), any people, and any obstacles or dangers.",
+    read: "Read all the important text in the image clearly and in a sensible order (signboards, documents, screens, labels).",
+    medicine: "This is a medicine or product label. Identify the name, strength/dose written on the pack, expiry date, and any warnings printed on it. Only report what is written; do not give medical advice.",
+    money: "Identify the currency notes or coins (likely Pakistani Rupees) and give the total amount."
+  };
+
+  // ================= SPEECH OUTPUT =================
+  let voices = [];
+  const loadVoices = () => { voices = speechSynthesis.getVoices(); };
+  if ("speechSynthesis" in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+  const findVoice = (p) => voices.find(v => v.lang.toLowerCase().replace("_", "-").startsWith(p));
+  let warnedVoice = false;
+
+  // say({en, ur, hi}) – speaks in the selected language
+  function say(t) {
+    if (!("speechSynthesis" in window) || !t) return;
+    speechSynthesis.cancel();
+    let text = t.en, voice = findVoice("en"), code = "en-US";
+    if (lang === "ur") {
+      const urV = findVoice("ur"), hiV = findVoice("hi");
+      if (urV && t.ur) { text = t.ur; voice = urV; code = urV.lang; }
+      else if (hiV && t.hi) { text = t.hi; voice = hiV; code = hiV.lang; }   // Hindustani voice reads Urdu speech
+      else {
+        text = t.en || t.ur;
+        if (!warnedVoice) { warnedVoice = true; sys("No Urdu voice on this computer – speaking English. (Chrome usually has one; check internet.)"); }
+      }
+    }
+    if (!text) return;
+    const u = new SpeechSynthesisUtterance(text);
+    if (voice) u.voice = voice;
+    u.lang = code;
+    u.rate = 0.95;
+    speechSynthesis.speak(u);
+  }
+
+  // ================= CHAT UI =================
+  function add(cls, html) {
+    const d = document.createElement("div");
+    d.className = "msg " + cls;
+    if (html instanceof Node) d.appendChild(html); else d.innerHTML = html;
+    $("msgs").appendChild(d);
+    $("msgs").scrollTop = $("msgs").scrollHeight;
+    return d;
+  }
+  function sys(text) { const d = add("sys", ""); d.textContent = "— " + text + " —"; }
+  function userMsg(text, imgUrl) {
+    const d = add("user", "");
+    if (text) { const p = document.createElement("div"); p.textContent = text; d.appendChild(p); }
+    if (imgUrl) { const im = document.createElement("img"); im.src = imgUrl; d.appendChild(im); }
+  }
+  function botText(t) {   // simple bot message from T
+    const d = add("bot", "");
+    d.innerHTML = `<div class="who">IRIS</div>`;
+    const p = document.createElement("div");
+    p.className = lang === "ur" ? "rtl" : "";
+    p.textContent = lang === "ur" ? t.ur : t.en;
+    d.appendChild(p);
+  }
+
+  function botReply(r) {
+    const d = add("bot", "");
+    const rtl = lang === "ur" ? "rtl" : "";
+    d.innerHTML = `<div class="who">IRIS</div>`;
+    const main = document.createElement("div"); main.className = "main " + rtl; main.textContent = r.answer || ""; d.appendChild(main);
+    if (r.guidance) { const g = document.createElement("div"); g.className = "gd " + rtl; g.textContent = "🎯 " + r.guidance; d.appendChild(g); }
+    const warns = (r.warnings || []).filter(Boolean);
+    if (warns.length) { const w = document.createElement("div"); w.className = "wr " + rtl; w.textContent = "⚠ " + warns.join(" · "); d.appendChild(w); }
+    if ((r.details || []).length) {
+      const det = document.createElement("details");
+      det.innerHTML = `<summary>DETAILS (${r.details.length})</summary>`;
+      const ul = document.createElement("ul"); ul.className = rtl;
+      r.details.forEach(x => { const li = document.createElement("li"); li.textContent = x; ul.appendChild(li); });
+      det.appendChild(ul); d.appendChild(det);
+    }
+    const tools = document.createElement("div"); tools.className = "tools";
+    const b1 = document.createElement("button"); b1.textContent = "🔁 REPEAT"; b1.onclick = () => speakReply(r);
+    const b2 = document.createElement("button"); b2.textContent = "📋 DETAILS"; b2.onclick = () => speakDetails(r);
+    tools.append(b1, b2); d.appendChild(tools);
+  }
+
+  function replySpeech(r) {
+    const warns = (r.warnings || []).filter(Boolean);
+    const parts = [r.answer, r.guidance, warns.length ? (lang === "ur" ? "خبردار: " : "Warning: ") + warns.join(". ") : ""].filter(Boolean);
+    return { en: parts.join(" "), ur: parts.join(" "), hi: r.answer_tts || "" };
+  }
+  function speakReply(r) { say(replySpeech(r)); }
+  function speakDetails(r) {
+    const d = (r.details || []).join(". ");
+    if (!d) return say({ en: "No extra details.", ur: "مزید تفصیل نہیں ہے۔", hi: "मज़ीद तफ़सील नहीं है।" });
+    say({ en: d, ur: d, hi: r.details_tts || "" });
+  }
+
+  // ================= SETTINGS / STATE =================
+  setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString("en-GB"); }, 1000);
+  try { const k = localStorage.getItem("iris_key") || ""; $("key").value = k; if (!k) $("keyBox").open = true; } catch (e) { $("keyBox").open = true; }
+
+  function setLang(l) {
+    lang = l;
+    $("lEn").classList.toggle("on", l === "en");
+    $("lUr").classList.toggle("on", l === "ur");
+    $("question").dir = l === "ur" ? "rtl" : "ltr";
+    say(l === "ur" ? { ur: "اردو منتخب ہو گئی۔", hi: "उर्दू मुंतख़ब हो गई।", en: "Urdu selected." } : { en: "English selected." });
+  }
+  $("lEn").onclick = () => setLang("en");
+  $("lUr").onclick = () => setLang("ur");
+
+  document.querySelectorAll(".mode").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll(".mode").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    mode = b.dataset.mode;
+    $("hud").textContent = "MODE: " + b.textContent.trim();
+    if (stream) { const g = T.guide[mode]; $("guide").textContent = "🎯 " + (lang === "ur" ? g.ur : g.en); say(g); }
+    else say({ en: b.textContent.trim().toLowerCase() + " mode" });
+  }));
+
+  // ================= CAMERA + LIVE GUIDANCE =================
+  $("camBtn").addEventListener("click", async () => {
+    if (stream) { stopCamera(); return; }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      $("video").srcObject = stream;
+      $("video").style.display = "block";
+      $("shot").style.display = "none";
+      $("hint").style.display = "none";
+      $("meters").style.display = "flex";
+      $("camBtn").textContent = "⏹ CAMERA OFF";
+      $("hud").textContent = "● LIVE";
+      const g = T.guide[mode];
+      $("guide").textContent = "🎯 " + (lang === "ur" ? g.ur : g.en);
+      botText(g); say(g);
+      startMonitor();
+    } catch (err) {
+      sys("Camera error: " + err.message + ". Use UPLOAD instead.");
+    }
+  });
+
+  function stopCamera() {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    clearInterval(monitor);
+    $("video").style.display = "none";
+    $("meters").style.display = "none";
+    $("stage").classList.remove("bad");
+    $("camBtn").textContent = "📷 CAMERA ON";
+  }
+
+  // Checks light and shaking every second and speaks tips
+  function startMonitor() {
+    const c = document.createElement("canvas"); c.width = 32; c.height = 24;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    let prev = null, lastTip = 0, lastState = "", goodCount = 0, saidReady = false;
+    clearInterval(monitor);
+    monitor = setInterval(() => {
+      const v = $("video");
+      if (!stream || !v.videoWidth || busy) return;
+      ctx.drawImage(v, 0, 0, 32, 24);
+      const px = ctx.getImageData(0, 0, 32, 24).data;
+      let sum = 0, diff = 0; const g = [];
+      for (let i = 0; i < px.length; i += 4) { const y = 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2]; g.push(y); sum += y; }
+      const bright = sum / g.length;
+      if (prev) { for (let i = 0; i < g.length; i++) diff += Math.abs(g[i] - prev[i]); diff /= g.length; }
+      prev = g;
+      const dark = bright < 55, shaky = diff > 18;
+      $("mLight").textContent = "LIGHT: " + (dark ? "LOW" : "OK");  $("mLight").className = dark ? "warnc" : "good";
+      $("mSteady").textContent = shaky ? "MOVING" : "STEADY";       $("mSteady").className = shaky ? "warnc" : "good";
+      $("stage").classList.toggle("bad", dark || shaky);
+      const state = dark ? "dark" : shaky ? "shaky" : "ok";
+      const now = Date.now();
+      if (state !== "ok" && (state !== lastState || now - lastTip > 6000)) {
+        say(T[state]); $("guide").textContent = "🎯 " + (lang === "ur" ? T[state].ur : T[state].en);
+        lastTip = now; saidReady = false; goodCount = 0;
+      }
+      if (state === "ok") { goodCount++; if (goodCount === 3 && !saidReady && now - lastTip > 2500) { saidReady = true; say(T.ready); $("guide").textContent = "✅ " + (lang === "ur" ? T.ready.ur : T.ready.en); } }
+      lastState = state;
+    }, 1000);
+  }
+
+  function toImage(source, w, h) {
+    const max = 1600, scale = Math.min(1, max / Math.max(w, h));
+    const c = document.createElement("canvas");
+    c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+    c.getContext("2d").drawImage(source, 0, 0, c.width, c.height);
+    const url = c.toDataURL("image/jpeg", 0.85);
+    return { base64: url.split(",")[1], mimeType: "image/jpeg", url };
+  }
+  function captureFrame() { const v = $("video"); return (stream && v.videoWidth) ? toImage(v, v.videoWidth, v.videoHeight) : null; }
+
+  $("upload").addEventListener("change", (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    stopCamera();
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        image = toImage(img, img.width, img.height);
+        $("shot").src = image.url; $("shot").style.display = "block"; $("hint").style.display = "none";
+        $("hud").textContent = "IMAGE LOADED";
+        history = [];
+        analyze("");
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ================= AI =================
+  function estimate() {
+    try { const t = JSON.parse(localStorage.getItem("iris_times") || "[]"); if (t.length) return Math.max(3, Math.round(t.reduce((a, b) => a + b, 0) / t.length)); } catch (e) {}
+    return 15;
+  }
+  function saveTime(s) { try { const t = JSON.parse(localStorage.getItem("iris_times") || "[]"); t.push(s); localStorage.setItem("iris_times", JSON.stringify(t.slice(-5))); } catch (e) {} }
+
+  function langRules() {
+    return lang === "ur"
+      ? `Write "answer", "details", "warnings" and "guidance" in simple Urdu (Urdu script). Also fill "answer_tts" with the full spoken text (answer + guidance + warnings) written in Devanagari script (same Urdu words, only the script changes, so a text-to-speech voice can read it), and "details_tts" with the details in Devanagari script.`
+      : `Write everything in simple English. Leave "answer_tts" and "details_tts" as empty strings.`;
+  }
+  const SHAPE = `Reply with ONLY valid JSON (no extra text, no markdown) in exactly this shape:
+{
+  "answer": "short, clear answer (2-4 sentences) that will be read aloud",
+  "details": ["useful extra detail", "..."],
+  "warnings": ["danger, obstacle, expired date or important caution (empty list if none)"],
+  "guidance": "if the image is blurry, too dark, cut off, too far or the object is not fully visible, tell the user exactly how to move or hold it (e.g. 'move the box a little to the left and closer'). Empty string if the image is good.",
+  "answer_tts": "",
+  "details_tts": ""
+}`;
+
+  async function analyze(question) {
+    const key = $("key").value.trim();
+    if (!key) { $("keyBox").open = true; sys("Paste your API key in settings first."); return; }
+    try { localStorage.setItem("iris_key", key); } catch (e) {}
+    if (busy) return;
+
+    // Build the message for Gemma
+    let userParts;
+    if (history.length === 0) {
+      if (!image) { botText(T.noimg); say(T.noimg); return; }
+      userMsg(question || "📷 What is this?", image.url);
+      userParts = [
+        { inline_data: { mime_type: image.mimeType, data: image.base64 } },
+        { text: `You are IRIS, an AI assistant that acts as the eyes of a visually impaired person in Pakistan.
+Task: ${MODE_TASK[mode]}
+${question ? `The user asks: "${question}". Answer this directly first.` : ""}
+Speak to the user directly, kindly and clearly. The user may ask follow-up questions about this same image.
+${langRules()}
+${SHAPE}` }
+      ];
+    } else {
+      userMsg(question);
+      userParts = [{ text: `Follow-up question from the user about the same image: "${question}"\n${langRules()}\n${SHAPE}` }];
+    }
+
+    const est = estimate();
+    busy = true;
+    $("go").disabled = true; $("logo").classList.add("busy");
+    $("scan").style.display = "block"; $("hud").textContent = "◉ SCANNING";
+    say(waitMsg(est));
+
+    const typing = add("bot", `<div class="who">IRIS</div><div class="typing"><span><i></i> <i></i> <i></i></span><span class="cd">~${est}s</span></div><div class="bar"><div></div></div>`);
+    const t0 = Date.now();
+    const timer = setInterval(() => {
+      const el = (Date.now() - t0) / 1000;
+      const left = Math.ceil(est - el);
+      typing.querySelector(".cd").textContent = left > 0 ? `ANALYZING… ~${left}s LEFT` : "ALMOST DONE…";
+      typing.querySelector(".bar div").style.width = Math.min(95, (el / est) * 100) + "%";
+    }, 250);
+
+    try {
+      const contents = [...history, { role: "user", parts: userParts }];
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(key)}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents }) }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || `Request failed (status ${res.status})`);
+      const out = (data.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || "").join("");
+      const s = out.indexOf("{"), e = out.lastIndexOf("}");
+      if (s === -1 || e === -1) throw new Error("The AI did not return the expected format. Reply was:\n\n" + out);
+      const r = JSON.parse(out.slice(s, e + 1));
+
+      history = [...contents, { role: "model", parts: [{ text: out.slice(s, e + 1) }] }];
+      saveTime(Math.round((Date.now() - t0) / 1000));
+      typing.remove();
+      lastReply = r;
+      botReply(r);
+      speakReply(r);
+      $("hud").textContent = "✓ COMPLETE";
+    } catch (err) {
+      typing.remove();
+      sys("Error: " + err.message);
+      botText(T.error); say(T.error);
+      $("hud").textContent = "✕ ERROR";
+    } finally {
+      clearInterval(timer);
+      busy = false;
+      $("go").disabled = false; $("logo").classList.remove("busy");
+      $("scan").style.display = "none";
+    }
+  }
+
+  // "See for me" = take a new picture and start a new conversation about it
+  function seeForMe(question) {
+    const frame = captureFrame();
+    if (frame) { image = frame; $("shot").src = frame.url; $("shot").style.display = "block"; stopCamera(); }
+    if (!image) { botText(T.noimg); say(T.noimg); return; }
+    history = [];
+    sys("NEW SCAN");
+    analyze(question || "");
+  }
+  $("go").addEventListener("click", () => seeForMe(""));
+
+  // ================= COMMANDS =================
+  const isRepeat  = (q) => /\b(repeat|again|read again|say again|phir|dobara|dubara)\b/i.test(q) || /دوبارہ|پھر سے|دہرا/.test(q);
+  const isDetails = (q) => /\b(details?|more|tafseel)\b/i.test(q) || /تفصیل/.test(q);
+  const isCapture = (q) => /\b(see for me|capture|take (a )?photo|scan|what is this|dekho)\b/i.test(q) || /دیکھو|تصویر لو/.test(q);
+
+  function handle(q) {
+    q = (q || "").trim();
+    if (!q) return;
+    $("question").value = "";
+    if (isRepeat(q)) { userMsg(q); if (lastReply) speakReply(lastReply); else { botText(T.nothing); say(T.nothing); } return; }
+    if (isDetails(q) && lastReply) { userMsg(q); speakDetails(lastReply); return; }
+    if (isCapture(q) && stream) { seeForMe(""); return; }
+    if (stream) { seeForMe(q); return; }        // camera live: take a new photo and ask
+    analyze(q);                                   // otherwise follow-up on current image
+  }
+  $("send").onclick = () => handle($("question").value);
+  $("question").addEventListener("keydown", (e) => { if (e.key === "Enter") handle($("question").value); });
+  $("qRepeat").onclick = () => { if (lastReply) speakReply(lastReply); else say(T.nothing); };
+  $("qDetails").onclick = () => { if (lastReply) speakDetails(lastReply); else say(T.nothing); };
+  document.querySelectorAll(".quick button[data-q]").forEach(b => b.onclick = () => handle(b.dataset.q));
+
+  // ================= VOICE INPUT =================
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, listening = false;
+  function toggleMic() {
+    if (!SR) { sys("Voice input not supported in this browser. Use Chrome, or type."); return; }
+    if (listening) { rec.stop(); return; }
+    speechSynthesis.cancel();
+    rec = new SR();
+    rec.lang = lang === "ur" ? "ur-PK" : "en-US";
+    rec.interimResults = true;
+    rec.onstart = () => { listening = true; $("mic").classList.add("live"); $("question").placeholder = "Listening…"; };
+    rec.onresult = (e) => {
+      const txt = Array.from(e.results).map(r => r[0].transcript).join("");
+      $("question").value = txt;
+      if (e.results[e.results.length - 1].isFinal) handle(txt);
+    };
+    rec.onerror = (e) => sys("Mic: " + e.error);
+    rec.onend = () => { listening = false; $("mic").classList.remove("live"); $("question").placeholder = "Ask anything… or press 🎤 and speak"; };
+    rec.start();
+  }
+  $("mic").onclick = toggleMic;
+
+  // Keyboard shortcuts for blind users
+  document.addEventListener("keydown", (e) => {
+    if (document.activeElement && ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+    if (e.code === "Space") { e.preventDefault(); toggleMic(); }
+    else if (e.key.toLowerCase() === "r") { if (lastReply) speakReply(lastReply); else say(T.nothing); }
+    else if (e.key.toLowerCase() === "c") { seeForMe(""); }
+  });
+
+  // Welcome
+  botText(T.hello);
+</script>
+</body>
+</html>
