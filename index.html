@@ -3,253 +3,420 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#03060d">
+<meta name="theme-color" content="#07080d">
 <meta name="mobile-web-app-capable" content="yes">
-<title>IRIS – Voice Vision Agent</title>
+<meta name="description" content="IRIS – hands-free talking eyes for blind and low-vision people. Voice-controlled, English and Urdu.">
+<title>IRIS – Talking Eyes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600;700&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #03060d; --panel: rgba(12, 20, 36, 0.78); --panel2: rgba(20, 32, 56, 0.75);
-    --text: #e8f1ff; --muted: #8a9cbb; --cyan: #22e4ff; --violet: #8b5cf6; --amber: #ffc83d;
-    --danger: #ff4d6d; --ok: #2ef2a6; --border: rgba(34, 228, 255, 0.18);
-    --mono: "JetBrains Mono", ui-monospace, monospace; --display: "Orbitron", system-ui, sans-serif;
-    --urdu: "Noto Nastaliq Urdu", "Inter", serif;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: "Inter", system-ui, sans-serif; }
-  body { overflow-x: hidden; }
-  body::before { content: ""; position: fixed; inset: -50%; z-index: -2;
-    background-image: linear-gradient(rgba(34,228,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(34,228,255,.06) 1px, transparent 1px);
-    background-size: 46px 46px; transform: perspective(600px) rotateX(55deg); animation: gridmove 14s linear infinite; }
-  @keyframes gridmove { to { background-position: 0 460px; } }
-  body::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-    background: radial-gradient(circle at 15% 10%, rgba(139,92,246,.25), transparent 35%),
-                radial-gradient(circle at 85% 20%, rgba(34,228,255,.18), transparent 35%),
-                radial-gradient(circle at 50% 110%, rgba(34,228,255,.15), transparent 40%); }
-  [hidden] { display: none !important; }
-  .rtl { direction: rtl; text-align: right; font-family: var(--urdu); line-height: 2.1; }
+/* =====================================================================
+   IRIS v2 – "liquid glass" design
+   Readability first: every text sits on a dark tinted glass layer.
+   ===================================================================== */
+:root {
+  --bg: #07080d;
+  --text: #ffffff;
+  --text2: rgba(240, 243, 250, .86);
+  --muted: rgba(240, 243, 250, .66);
+  --glass: rgba(28, 32, 48, .55);
+  --glass-strong: rgba(14, 16, 26, .74);
+  --stroke: rgba(255, 255, 255, .18);
+  --stroke2: rgba(255, 255, 255, .08);
+  --blue: #0071e3; --blue-l: #0a84ff; --green: #30d158; --yellow: #ffd60a; --purple: #bf5af2; --red: #ff453a; --gray: #8e8e93;
+  --r-xl: 28px; --r-lg: 22px; --r-md: 16px;
+  --shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 24px 60px -24px rgba(0,0,0,.7), 0 8px 24px -12px rgba(0,0,0,.55);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  --urdu: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  --blur: blur(28px) saturate(180%);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { background: var(--bg); }
+html, body { margin: 0; min-height: 100%; color: var(--text); font-family: var(--font); }
+body { background: transparent; }
+body { font-size: 17px; line-height: 1.45; overflow-x: hidden; }
+[hidden] { display: none !important; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid #fff; outline-offset: 3px; box-shadow: 0 0 0 7px rgba(10,132,255,.55); }
+.sr-only { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.rtl { direction: rtl; text-align: right; font-family: var(--urdu); line-height: 2.1; }
 
-  /* ===== Eye logo ===== */
-  .iris { position: relative; width: var(--s, 64px); height: var(--s, 64px); flex-shrink: 0; }
-  .iris .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--cyan); border-bottom-color: var(--violet); animation: spin 3s linear infinite; }
-  .iris .ring.r2 { inset: 12%; border-top-color: var(--violet); border-bottom-color: var(--cyan); animation-duration: 2s; animation-direction: reverse; }
-  .iris .core { position: absolute; inset: 28%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff 0 6%, var(--cyan) 18%, #0a5e8a 55%, #02101e 75%);
-                box-shadow: 0 0 24px var(--cyan); animation: breathe 2.6s ease-in-out infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes breathe { 50% { transform: scale(1.15); box-shadow: 0 0 44px var(--cyan); } }
-  h1.logo { font-family: var(--display); margin: 0; font-weight: 800; letter-spacing: 8px;
-       background: linear-gradient(90deg, var(--cyan), #fff, var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent;
-       background-size: 200% auto; animation: shine 4s linear infinite; }
-  @keyframes shine { to { background-position: 200% center; } }
+/* ---------- Calm animated gradient mesh (one layer, no blur filter = cheap) ---------- */
+.mesh { position: fixed; inset: -25%; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(40% 35% at 20% 25%, rgba(10,132,255,.38), transparent 70%),
+    radial-gradient(35% 30% at 80% 20%, rgba(191,90,242,.30), transparent 70%),
+    radial-gradient(45% 40% at 70% 80%, rgba(48,209,88,.16), transparent 70%),
+    radial-gradient(40% 35% at 15% 85%, rgba(255,55,95,.18), transparent 70%),
+    var(--bg);
+  animation: drift 48s ease-in-out infinite alternate; }
+@keyframes drift { 0% { transform: translate(0,0) rotate(0deg) scale(1); } 100% { transform: translate(-4%, 3%) rotate(8deg) scale(1.06); } }
 
-  /* ===== Start screen: the whole screen is one button ===== */
-  .starter { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; color: var(--text);
-             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; cursor: pointer;
-             font-family: inherit; padding: 24px; text-align: center; }
-  .starter:focus-visible { outline: 4px solid var(--cyan); outline-offset: -10px; }
-  .starter h1 { font-size: clamp(44px, 12vw, 84px); }
-  .starter .sub { color: var(--muted); font-family: var(--mono); letter-spacing: 3px; font-size: 12px; }
-  .starter .cta { font-family: var(--display); letter-spacing: 4px; font-size: clamp(16px, 4vw, 24px); padding: 18px 30px; border-radius: 999px;
-                  border: 2px solid var(--cyan); box-shadow: 0 0 30px rgba(34,228,255,.35); animation: pulse 2s ease-in-out infinite; }
-  @keyframes pulse { 50% { box-shadow: 0 0 60px rgba(34,228,255,.6); transform: scale(1.03); } }
-  .starter .ur { font-family: var(--urdu); font-size: 20px; color: var(--muted); direction: rtl; line-height: 2; }
-  .starter small { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+/* ---------- Glass ---------- */
+.glass { background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--stroke); box-shadow: var(--shadow); border-radius: var(--r-xl); }
+.glass-strong { background: var(--glass-strong); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--stroke); box-shadow: var(--shadow); }
 
-  /* ===== App ===== */
-  .app { max-width: 1200px; margin: 0 auto; padding: 14px 16px 32px; }
-  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
-  .brand { display: flex; align-items: center; gap: 12px; }
-  .brand h1 { font-size: 26px; letter-spacing: 6px; }
-  .brand .tag { font-family: var(--mono); color: var(--cyan); font-size: 10px; letter-spacing: 2px; }
-  .pills { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-family: var(--mono); font-size: 11px; letter-spacing: 1px; }
-  .pill { border: 1px solid var(--border); border-radius: 999px; padding: 7px 11px; color: var(--muted); background: var(--panel2); }
-  .pill.on { color: var(--ok); border-color: rgba(46,242,166,.45); }
-  .pill.off { color: var(--danger); border-color: rgba(255,77,109,.45); }
-  .iconbtn { border: 1px solid var(--border); background: var(--panel2); color: var(--text); border-radius: 10px; padding: 7px 11px; cursor: pointer; font-family: var(--mono); font-size: 12px; }
-  .iconbtn:hover { border-color: var(--cyan); }
+/* ---------- The orb (Siri-like) ---------- */
+.orb { --c: var(--gray); --s: 96px; position: relative; width: var(--s); height: var(--s); border-radius: 50%; flex-shrink: 0;
+  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0 5%, color-mix(in srgb, var(--c) 70%, #fff) 20%, var(--c) 46%, color-mix(in srgb, var(--c) 35%, #000) 82%);
+  box-shadow: 0 0 calc(var(--s) * .45) color-mix(in srgb, var(--c) 55%, transparent), inset 0 calc(var(--s) * -.08) calc(var(--s) * .2) rgba(0,0,0,.35);
+  transition: background .6s ease, box-shadow .6s ease; animation: breathe 3.2s ease-in-out infinite; }
+.orb::after { content: ""; position: absolute; inset: -9%; border-radius: 50%; opacity: 0; transition: opacity .4s;
+  background: conic-gradient(from 0deg, transparent 0 55%, color-mix(in srgb, var(--c) 85%, #fff) 75%, transparent 95%);
+  -webkit-mask: radial-gradient(circle, transparent 60%, #000 62%); mask: radial-gradient(circle, transparent 60%, #000 62%);
+  animation: spin 1.6s linear infinite; }
+@keyframes breathe { 50% { transform: scale(1.06); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes talk { 0%,100% { transform: scale(1); } 25% { transform: scale(1.09); } 50% { transform: scale(1.02); } 75% { transform: scale(1.11); } }
+@keyframes shake { 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+[data-orb="listening"] .orb { --c: var(--green); animation-duration: 1.8s; }
+[data-orb="starting"]  .orb { --c: #5e8bbd; }
+[data-orb="waiting"]   .orb { --c: var(--gray); animation-duration: 5s; }
+[data-orb="aiming"]    .orb { --c: var(--yellow); animation-duration: .9s; }
+[data-orb="capturing"] .orb { --c: #ffffff; }
+[data-orb="thinking"]  .orb { --c: var(--purple); }
+[data-orb="thinking"]  .orb::after { opacity: 1; }
+[data-orb="speaking"]  .orb { --c: var(--blue-l); animation: talk .9s ease-in-out infinite; }
+[data-orb="error"]     .orb { --c: var(--red); animation: shake .5s ease 1; }
+[data-orb="paused"]    .orb { --c: #4a4a52; animation: none; }
 
-  .layout { display: grid; grid-template-columns: 1.15fr .85fr; gap: 16px; }
-  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
-  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 16px;
-           backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 10px 40px rgba(0,0,0,.4); }
-  .label { font-family: var(--mono); font-size: 11px; color: var(--cyan); letter-spacing: 2px; margin: 0 0 8px; display: block; }
+/* ---------- Start screen: the whole screen is one button ---------- */
+.start { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; color: var(--text);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; text-align: center; }
+.start .orb { --s: 140px; --c: var(--blue-l); }
+.start h1 { margin: 6px 0 0; font-size: clamp(48px, 13vw, 76px); font-weight: 700; letter-spacing: -1px; }
+.start .sub { color: var(--text2); font-size: 18px; max-width: 420px; }
+.start .cta { padding: 18px 30px; border-radius: 999px; font-size: 20px; font-weight: 600; }
+.start .ur { font-family: var(--urdu); font-size: 20px; color: var(--text2); direction: rtl; line-height: 2.1; }
+.start small { color: var(--muted); font-size: 14px; }
 
-  .stage { position: relative; background: #000; border-radius: 16px; overflow: hidden; aspect-ratio: 4/3; border: 1px solid var(--border);
-           cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
-  .stage video { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-  .camoff { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--mono); color: var(--muted); font-size: 13px; letter-spacing: 1px; text-align: center; padding: 20px; }
-  .snap { position: absolute; right: 10px; bottom: 10px; width: 26%; border-radius: 10px; border: 2px solid var(--cyan); display: none; box-shadow: 0 0 20px rgba(34,228,255,.4); }
-  .flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
-  .flash.go { animation: flash .4s ease; }
-  @keyframes flash { 0% { opacity: .85; } 100% { opacity: 0; } }
-  .hud { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 11px; color: var(--cyan);
-         letter-spacing: 2px; background: rgba(0,0,0,.6); padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
-  .meters { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 6px; flex-wrap: wrap; max-width: 70%; }
-  .meters span { font-family: var(--mono); font-size: 10px; letter-spacing: 1px; padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,.65); }
-  .good { color: var(--ok); } .bad { color: var(--amber); }
-  .tip { margin-top: 10px; font-family: var(--mono); color: var(--amber); min-height: 22px; font-size: 14px; }
+/* ---------- App layout ---------- */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 1280px; margin: 0 auto;
+  padding: max(14px, env(safe-area-inset-top)) 20px 14px; }
+.brand { display: flex; align-items: center; gap: 12px; border: 0; background: none; padding: 4px; border-radius: 16px; }
+.brand .orb { --s: 34px; animation: none; }
+.brand b { font-size: 24px; letter-spacing: -.3px; }
+.brand span { display: block; font-size: 12px; color: var(--muted); text-align: left; }
+.tools { display: flex; gap: 8px; align-items: center; }
+.pill { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--text2); }
+.pill .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gray); }
+.pill.on .dot { background: var(--green); box-shadow: 0 0 10px var(--green); }
+.pill.bad .dot { background: var(--red); }
+.iconbtn { min-width: 48px; min-height: 48px; padding: 0 14px; border-radius: 999px; font-size: 15px; font-weight: 600; }
 
-  .modes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
-  @media (max-width: 520px) { .modes { grid-template-columns: repeat(3, 1fr); } }
-  .mode { background: var(--panel2); border: 1px solid var(--border); color: var(--text); border-radius: 12px; padding: 10px 4px; font-size: 10px; font-weight: 600;
-          cursor: pointer; font-family: var(--mono); letter-spacing: 1px; transition: transform .2s, border-color .2s, box-shadow .2s; }
-  .mode span { display: block; font-size: 20px; margin-bottom: 4px; }
-  .mode:hover { transform: translateY(-2px); border-color: var(--cyan); }
-  .mode.active { border-color: var(--cyan); box-shadow: 0 0 22px rgba(34,228,255,.35), inset 0 0 20px rgba(34,228,255,.12); }
-  .actions { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-top: 10px; }
-  .btn { padding: 14px; border: 0; border-radius: 14px; cursor: pointer; font-family: var(--display); font-weight: 800; font-size: 14px; letter-spacing: 3px;
-         color: #02101e; background: linear-gradient(90deg, var(--cyan), var(--violet), var(--cyan)); background-size: 200% auto; animation: shine 3s linear infinite;
-         box-shadow: 0 0 24px rgba(34,228,255,.35); }
-  .ghost { padding: 14px 8px; border-radius: 14px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); cursor: pointer; font-family: var(--mono); font-size: 12px; letter-spacing: 1px; }
-  .ghost:hover { border-color: var(--cyan); }
+.layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(340px, .9fr); gap: 20px; max-width: 1280px; margin: 0 auto; padding: 0 20px 32px; }
+.col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
-  /* State card */
-  .statecard { display: flex; align-items: center; gap: 16px; }
-  .orb { position: relative; width: 62px; height: 62px; border-radius: 50%; flex-shrink: 0; background: radial-gradient(circle at 35% 35%, #fff 0 5%, var(--c, var(--cyan)) 30%, transparent 72%);
-         box-shadow: 0 0 30px var(--c, var(--cyan)); animation: breathe 2.4s ease-in-out infinite; }
-  .app[data-state="aiming"] .orb { --c: var(--amber); animation-duration: 1s; }
-  .app[data-state="thinking"] .orb { --c: var(--violet); animation-duration: .6s; }
-  .app[data-state="idle"].deaf .orb { --c: var(--muted); }
-  .app[data-state="idle"][data-conv="sleep"] .orb { --c: #3b5b8a; animation-duration: 4s; }
-  .app[data-state="idle"][data-conv="active"] .orb { --c: var(--ok); animation-duration: 1.2s; }
-  .statetext { font-family: var(--display); font-size: 20px; letter-spacing: 4px; }
-  .statehint { color: var(--muted); font-size: 13px; margin-top: 4px; line-height: 1.5; }
-  .wave { display: flex; gap: 4px; align-items: flex-end; height: 20px; margin-top: 8px; }
-  .wave i { width: 4px; height: 3px; border-radius: 2px; background: var(--cyan); }
-  .app.speaking .wave i { animation: wave .9s ease-in-out infinite; }
-  .wave i:nth-child(2) { animation-delay: .1s; } .wave i:nth-child(3) { animation-delay: .2s; } .wave i:nth-child(4) { animation-delay: .3s; }
-  .wave i:nth-child(5) { animation-delay: .4s; } .wave i:nth-child(6) { animation-delay: .5s; } .wave i:nth-child(7) { animation-delay: .6s; }
-  @keyframes wave { 50% { height: 20px; } }
-  .progress { height: 4px; border-radius: 4px; background: var(--border); margin-top: 12px; overflow: hidden; }
-  .progress div { height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan), var(--violet)); transition: width .4s linear; }
-  .heard { margin-top: 10px; font-family: var(--mono); font-size: 13px; color: var(--violet); min-height: 18px; }
+/* Camera stage */
+.stage { position: relative; aspect-ratio: 4 / 3; border-radius: var(--r-xl); overflow: hidden; background: #000; border: 1px solid var(--stroke); box-shadow: var(--shadow); }
+.stage video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.stage.mirror video, .stage.mirror canvas { transform: scaleX(-1); }
+.camoff { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text2); font-size: 18px; text-align: center; padding: 24px; }
+.snap { position: absolute; right: 12px; bottom: 12px; width: 24%; border-radius: 14px; border: 2px solid rgba(255,255,255,.7); display: none; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+.flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.flash.go { animation: flash .45s ease; }
+@keyframes flash { 0% { opacity: .85; } 100% { opacity: 0; } }
+.capsule { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 28px); width: max-content;
+  display: flex; align-items: center; gap: 12px; padding: 12px 22px; border-radius: 999px; font-size: 20px; font-weight: 600; z-index: 2; }
+.capsule .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c, var(--gray)); box-shadow: 0 0 12px var(--c, transparent); flex-shrink: 0; }
+.capsule small { display: block; font-size: 13px; font-weight: 500; color: var(--text2); }
+[data-orb="listening"] .capsule { --c: var(--green); } [data-orb="aiming"] .capsule { --c: var(--yellow); }
+[data-orb="thinking"] .capsule { --c: var(--purple); } [data-orb="speaking"] .capsule { --c: var(--blue-l); }
+[data-orb="error"] .capsule { --c: var(--red); }
+.aimhud { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px; flex-wrap: wrap; max-width: 70%; z-index: 2; }
+.aimhud span { padding: 6px 10px; border-radius: 999px; font-size: 14px; font-weight: 700; background: rgba(0,0,0,.84); }
+.ok { color: var(--green); } .warnc { color: var(--yellow); }
 
-  .result { margin-top: 14px; }
-  .result .answer { font-size: 20px; font-weight: 600; line-height: 1.5; }
-  .result .warn { margin-top: 8px; color: #ff9aae; }
-  .result ul { margin: 8px 0 0; padding-inline-start: 18px; color: var(--muted); }
-  .log { margin-top: 14px; max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
-  .line { flex-shrink: 0; width: fit-content; max-width: 90%; padding: 10px 12px; border-radius: 12px; font-size: 14px; line-height: 1.5; animation: rise .3s ease both; }
-  .line.iris { align-self: flex-start; background: var(--panel2); border: 1px solid var(--border); }
-  .line.user { align-self: flex-end; background: rgba(139,92,246,.22); border: 1px solid rgba(139,92,246,.4); }
-  .line.sys { align-self: center; background: transparent; color: var(--muted); font-family: var(--mono); font-size: 11px; text-align: center; }
-  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-  .composer { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 12px; }
-  .composer input, dialog input, dialog select { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: rgba(3,6,13,.8); color: var(--text); font-size: 14px; font-family: var(--mono); }
-  .keys { margin-top: 10px; color: var(--muted); font-family: var(--mono); font-size: 11px; line-height: 1.8; }
+/* State card with the big orb */
+.statecard { display: flex; align-items: center; gap: 18px; padding: 18px; }
+.statecard h2 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.3px; }
+.statecard p { margin: 4px 0 0; color: var(--text2); font-size: 16px; }
+.progress { height: 6px; border-radius: 6px; background: rgba(255,255,255,.12); margin-top: 10px; overflow: hidden; }
+.progress div { height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, var(--blue-l), var(--purple)); transition: width .5s linear; }
+.heard { min-height: 22px; margin-top: 8px; color: var(--muted); font-size: 15px; font-style: italic; }
 
-  dialog { background: #0b1222; color: var(--text); border: 1px solid var(--border); border-radius: 16px; padding: 20px; width: min(460px, 92vw); }
-  dialog::backdrop { background: rgba(0,0,0,.6); }
-  dialog h2 { margin: 0 0 12px; font-family: var(--display); letter-spacing: 3px; font-size: 16px; }
-  dialog label { display: block; font-family: var(--mono); font-size: 11px; color: var(--cyan); letter-spacing: 1px; margin: 14px 0 6px; }
-  dialog .row { display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end; }
-  dialog .note { color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 8px; }
-  .note-foot { color: var(--muted); font-size: 11px; text-align: center; margin-top: 16px; font-family: var(--mono); letter-spacing: 1px; line-height: 1.7; }
+/* Mode chips + actions */
+.chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: 0 0 auto; min-height: 48px; padding: 0 18px; border-radius: 999px; font-size: 16px; font-weight: 600; color: var(--text); }
+.chip[aria-pressed="true"] { background: #fff; color: #000; border-color: #fff; }
+.actions { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+.primary { min-height: 60px; border: 0; border-radius: 18px; background: var(--blue); color: #fff; font-size: 19px; font-weight: 700;
+  box-shadow: 0 12px 30px -10px rgba(0,113,227,.7); transition: transform .3s var(--spring), background .3s; }
+.primary:active { transform: scale(.97); }
+.secondary { min-height: 60px; border-radius: 18px; font-size: 16px; font-weight: 600; }
+
+/* Answer sheet */
+.sheet { padding: 20px; }
+.sheet .grab { display: none; }
+.sheet h3 { margin: 0 0 8px; font-size: 14px; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.answer { font-size: 24px; font-weight: 600; line-height: 1.45; }
+.warnbox { margin-bottom: 12px; padding: 12px 14px; border-radius: 16px; background: rgba(255,69,58,.24); border: 1px solid rgba(255,69,58,.55); font-weight: 600; font-size: 19px; }
+.details { margin: 12px 0 0; padding-inline-start: 22px; color: var(--text2); font-size: 18px; }
+.details li { margin-bottom: 6px; }
+.sheetbtns { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.sheetbtns button { min-height: 48px; padding: 0 18px; border-radius: 999px; font-weight: 600; }
+.empty { color: var(--muted); font-size: 17px; }
+
+/* Conversation + help */
+details.box { padding: 0; }
+details.box > summary { min-height: 54px; display: flex; align-items: center; padding: 0 20px; font-weight: 600; font-size: 17px; list-style: none; cursor: pointer; }
+details.box > summary::-webkit-details-marker { display: none; }
+details.box > summary::after { content: "›"; margin-left: auto; font-size: 24px; transition: transform .3s; }
+details.box[open] > summary::after { transform: rotate(90deg); }
+.boxbody { padding: 0 16px 16px; }
+.log { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; padding: 4px; }
+.line { flex-shrink: 0; width: fit-content; max-width: 88%; padding: 10px 14px; border-radius: 18px; font-size: 16px; line-height: 1.45; }
+.line.iris { align-self: flex-start; background: rgba(255,255,255,.10); border-bottom-left-radius: 6px; }
+.line.user { align-self: flex-end; background: var(--blue); border-bottom-right-radius: 6px; }
+.line.sys { align-self: center; background: none; color: var(--muted); font-size: 13px; text-align: center; padding: 2px 8px; }
+.composer { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 12px; }
+.field { width: 100%; min-height: 48px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--stroke); background: rgba(0,0,0,.35); font-size: 16px; }
+.btn { min-height: 48px; padding: 0 18px; border-radius: 14px; font-weight: 600; }
+.ref { color: var(--text2); font-size: 15px; }
+.ref h4 { margin: 12px 0 4px; font-size: 15px; color: var(--text); }
+.ref ul { margin: 0; padding-inline-start: 20px; }
+
+/* Debug timeline */
+.debug { position: fixed; left: 10px; bottom: 10px; z-index: 50; width: min(620px, calc(100vw - 20px)); height: 42vh; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; }
+.debug header { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--stroke2); font-weight: 700; }
+.debug header span { margin-right: auto; }
+.debug pre { flex: 1; margin: 0; padding: 10px 12px; overflow: auto; font-family: var(--mono); font-size: 12px; line-height: 1.5; color: #d6e2ff; white-space: pre-wrap; }
+
+/* Settings dialog */
+dialog { width: min(520px, calc(100vw - 24px)); max-height: 90vh; padding: 22px; border-radius: 26px; color: var(--text); background: rgba(14, 16, 26, .95) !important; }
+dialog::backdrop { background: rgba(0,0,0,.55); }
+dialog h2 { margin: 0 0 6px; font-size: 22px; }
+dialog label { display: block; margin: 14px 0 6px; font-size: 14px; font-weight: 600; color: var(--text2); }
+dialog .check { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 6px 0; font-size: 16px; color: var(--text); }
+dialog .check input { width: 22px; height: 22px; }
+dialog select.field, dialog input.field { font-size: 15px; }
+dialog .note { color: var(--muted); font-size: 13px; line-height: 1.55; margin-top: 8px; }
+dialog .row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+.modelcheck { font-family: var(--mono); font-size: 12px; white-space: pre-wrap; color: var(--text2); margin-top: 8px; }
+
+/* ---------- Phone layout: camera fills the screen, answer is a bottom sheet ---------- */
+@media (max-width: 860px) {
+  body { font-size: 16px; }
+  .topbar { padding-left: 12px; padding-right: 12px; }
+  .brand span { display: none; }
+  .pill .label { display: none; }
+  .layout { display: flex; flex-direction: column; gap: 12px; padding: 0 12px calc(24px + env(safe-area-inset-bottom)); }
+  .col { display: contents; }
+  .stage { order: 1; aspect-ratio: auto; height: min(60vh, 600px); }
+  .statecard { order: 2; padding: 14px 16px; }
+  .statecard .orb { --s: 72px; }
+  .statecard h2 { font-size: 22px; }
+  .chips { order: 3; }
+  .actions { order: 4; }
+  .convo { order: 6; } .refs { order: 7; }
+  .sheet { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 30; max-height: 55vh; overflow-y: auto;
+    background: rgba(14, 16, 26, .95);
+    transform: translateY(calc(100% + 24px)); transition: transform .55s var(--spring); }
+  .sheet.open { transform: none; }
+  .sheet .grab { display: block; width: 44px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.4); margin: -6px auto 12px; }
+  .capsule { font-size: 18px; padding: 10px 18px; }
+}
+
+/* ---------- Accessibility preferences ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass-strong { background: #1a1d29; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .mesh { display: none; }
+}
+/* High contrast: solid black + yellow, no glass */
+html.hc { --bg: #000; --text: #fff; --text2: #ffeb3b; --muted: #ffeb3b; --stroke: #ffeb3b; }
+html.hc .mesh { display: none; }
+html.hc .glass, html.hc .glass-strong { background: #000; backdrop-filter: none; -webkit-backdrop-filter: none; border: 2px solid #ffeb3b; box-shadow: none; }
+html.hc .primary { background: #ffeb3b; color: #000; box-shadow: none; }
+html.hc .chip[aria-pressed="true"] { background: #ffeb3b; color: #000; border-color: #ffeb3b; }
+html.hc .line.user { background: #ffeb3b; color: #000; }
+html.hc .orb { --c: #ffeb3b !important; box-shadow: none; }
+html.hc .warnbox { background: #000; border: 3px solid #ff5252; color: #fff; }
+html.hc .answer { color: #fff; }
+html.hc :focus-visible { outline-color: #ffeb3b; box-shadow: none; }
 </style>
 </head>
 <body>
+<div class="mesh" aria-hidden="true"></div>
 
-<!-- ===== START: the whole screen is one big button ===== -->
-<button id="starter" class="starter" aria-label="Start IRIS. Tap anywhere on the screen, or press any key.">
-  <div class="iris" style="--s:120px"><div class="ring"></div><div class="ring r2"></div><div class="core"></div></div>
-  <h1 class="logo">IRIS</h1>
-  <div class="sub">// HANDS-FREE TALKING EYES</div>
-  <div class="cta">TAP ANYWHERE TO START</div>
+<!-- ===== START: the whole screen is one button ===== -->
+<button id="start" class="start" aria-label="Start IRIS. Double-tap or press any key.">
+  <div class="orb" aria-hidden="true"></div>
+  <h1>IRIS</h1>
+  <div class="sub">Talking eyes for blind and low-vision people</div>
+  <div class="cta glass">Tap anywhere to start</div>
   <div class="ur">شروع کرنے کے لیے اسکرین پر کہیں بھی ٹیپ کریں</div>
-  <small>or press any key · then say “Hey IRIS” any time</small>
+  <small>or press any key · then just talk</small>
 </button>
 
 <!-- ===== MAIN APP ===== -->
-<main id="app" class="app" data-state="idle" hidden>
-  <div class="topbar">
-    <div class="brand">
-      <div class="iris" style="--s:46px"><div class="ring"></div><div class="ring r2"></div><div class="core"></div></div>
-      <div><h1 class="logo">IRIS</h1><div class="tag">VOICE VISION AGENT · <span id="modelTag">GEMINI + GEMMA</span></div></div>
+<div id="app" data-state="boot" data-orb="starting" hidden>
+  <header class="topbar">
+    <button class="brand" id="logo" aria-label="IRIS">
+      <div class="orb" aria-hidden="true"></div>
+      <div><b>IRIS</b><span id="modelTag">Gemini + Gemma</span></div>
+    </button>
+    <div class="tools">
+      <span class="pill glass" id="micPill" role="status" aria-live="off"><span class="dot"></span><span class="label" id="micText">Mic</span></span>
+      <button class="iconbtn glass" id="langBtn" aria-label="Switch language">EN</button>
+      <button class="iconbtn glass" id="hcBtn" aria-label="High contrast" aria-pressed="false"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 2a8 8 0 0 1 0 16z" fill="currentColor"/></svg></button>
+      <button class="iconbtn glass" id="gear" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1L15 3h-4l-.4 2.9a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 0 0 1.7 1L11 21h4l.4-2.9a7.6 7.6 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></button>
     </div>
-    <div class="pills">
-      <span class="pill" id="pMic">MIC —</span>
-      <span class="pill" id="pCam">CAM —</span>
-      <button class="iconbtn" id="langBtn">EN / اردو</button>
-      <button class="iconbtn" id="gear" aria-label="Settings">⚙ SETTINGS</button>
-    </div>
-  </div>
+  </header>
 
-  <div class="layout">
-    <section class="panel">
-      <span class="label">VISION</span>
-      <div class="stage" id="stage" aria-label="Camera. Tap to scan. Hold to repeat.">
+  <main class="layout" id="surface">
+    <div class="col">
+      <div class="stage" id="stage" role="button" tabindex="0" aria-label="Talk to IRIS. Double-tap to talk. While aiming, double-tap to take the picture.">
         <video id="video" autoplay playsinline muted></video>
         <canvas id="ov"></canvas>
-        <div class="camoff" id="camoff">[ CAMERA STARTING… ]</div>
+        <div class="camoff" id="camoff">Camera starting…</div>
         <img class="snap" id="snap" alt="">
         <div class="flash" id="flash"></div>
-        <div class="hud" id="hud">STANDBY</div>
-        <div class="meters" id="meters"></div>
+        <div class="capsule glass-strong" id="capsule" aria-hidden="true"><span class="dot"></span><div><div id="capText">Starting…</div><small id="capSub"></small></div></div>
+        <div class="aimhud" id="aimhud" aria-hidden="true"></div>
       </div>
-      <div class="tip" id="tip" aria-hidden="true"></div>
-      <div class="modes" id="modes">
-        <button class="mode active" data-mode="identify"><span>🔍</span>WHAT IS IT</button>
-        <button class="mode" data-mode="read"><span>📄</span>READ</button>
-        <button class="mode" data-mode="medicine"><span>💊</span>MEDICINE</button>
-        <button class="mode" data-mode="money"><span>💵</span>MONEY</button>
-        <button class="mode" data-mode="describe"><span>🏞️</span>AROUND ME</button>
+      <div class="chips" id="chips" role="group" aria-label="Mode">
+        <button class="chip glass" data-mode="identify" aria-pressed="true">🔍 What is it</button>
+        <button class="chip glass" data-mode="read" aria-pressed="false">📄 Read</button>
+        <button class="chip glass" data-mode="medicine" aria-pressed="false">💊 Medicine</button>
+        <button class="chip glass" data-mode="money" aria-pressed="false">💵 Money</button>
+        <button class="chip glass" data-mode="describe" aria-pressed="false">🏞️ Around me</button>
       </div>
       <div class="actions">
-        <button class="btn" id="scanBtn">SCAN</button>
-        <button class="ghost" id="repeatBtn">🔁 REPEAT</button>
-        <button class="ghost" id="stopBtn">⏹ STOP</button>
+        <button class="primary" id="primary">Scan</button>
+        <button class="secondary glass" id="repeatBtn">Repeat</button>
+        <button class="secondary glass" id="stopBtn">Stop</button>
       </div>
-    </section>
+    </div>
 
-    <section class="panel">
-      <div class="statecard">
-        <div class="orb"></div>
-        <div>
-          <div class="statetext" id="stateText">READY</div>
-          <div class="statehint" id="stateHint"></div>
-          <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="col">
+      <div class="statecard glass">
+        <div class="orb" id="orb" aria-hidden="true"></div>
+        <div style="flex:1;min-width:0">
+          <h2 id="stateTitle">Starting</h2>
+          <p id="stateHint">One moment…</p>
+          <div class="progress" aria-hidden="true"><div id="prog"></div></div>
+          <div class="heard" id="heard" aria-hidden="true"></div>
         </div>
       </div>
-      <div class="progress"><div id="prog"></div></div>
-      <div class="heard" id="heard" aria-hidden="true"></div>
-      <div class="result" id="result" hidden></div>
-      <span class="label" style="margin-top:14px">CONVERSATION</span>
-      <div class="log" id="log" aria-live="off"></div>
-      <div class="composer">
-        <input id="typed" type="text" placeholder="Type a command or question (for helpers)">
-        <button class="ghost" id="sendBtn">SEND</button>
-      </div>
-      <div class="keys">VOICE: "what is this" · "read" · "medicine" · "money" · "around me" · "repeat" · "details" · "stop" · "help"<br>
-        WAKE: "Hey IRIS" · "Listen" · "Hello" · "سنو" — or tap anywhere · DONE: "thank you"<br>
-        KEYS: SPACE talk · ENTER scan/capture · R repeat · D details · ESC stop · H help · L language · 1–5 modes<br>
-        TOUCH: tap anywhere = talk (or capture while aiming, or stop me talking) · hold = repeat</div>
-    </section>
-  </div>
-  <p class="note-foot">IRIS is an assistant, not a replacement for a doctor, pharmacist or white cane.<br>Built for Hacktoberfest 2026 · ACM UET New Campus · Open source</p>
-</main>
 
-<dialog id="settings">
+      <section class="sheet glass" id="sheet" aria-label="Answer">
+        <div class="grab" aria-hidden="true"></div>
+        <h3>Answer</h3>
+        <div id="answerBody"><div class="empty">Answers appear here. Say “what is this”, or double-tap the screen.</div></div>
+        <div class="sheetbtns" id="sheetBtns" hidden>
+          <button class="glass" id="sRepeat">🔁 Repeat</button>
+          <button class="glass" id="sDetails">📋 Details</button>
+          <button class="glass" id="sClose">Close</button>
+        </div>
+      </section>
+
+      <details class="box glass convo">
+        <summary>Conversation</summary>
+        <div class="boxbody">
+          <div class="log" id="log"></div>
+          <div class="composer">
+            <input class="field" id="typed" type="text" placeholder="Type a command (for helpers)" aria-label="Type a command">
+            <button class="btn glass" id="sendBtn">Send</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="box glass refs">
+        <summary>How to use · gestures &amp; sounds</summary>
+        <div class="boxbody ref">
+          <h4>Talk</h4>
+          <ul><li>“What is this” · “Read” · “Medicine” · “Money” · “Around me” — or any question</li>
+              <li>“Repeat” · “Details” · “Stop” · “Slower” / “Faster” · “Urdu” / “English” · “Help” · “Tutorial” · “Thank you”</li>
+              <li>After 20 s of silence IRIS waits: say “Hey IRIS”, “Listen” or “Hello” (سنو / ہیلو), or tap.</li></ul>
+          <h4>Touch (anywhere)</h4>
+          <ul><li>Tap: talk · stop IRIS talking · take the picture while aiming</li>
+              <li>Double-tap: scan in the current mode</li>
+              <li>Swipe left / right: change mode</li>
+              <li>Hold: repeat the last answer</li></ul>
+          <h4>Keyboard</h4>
+          <ul><li>Space talk · Enter scan/capture · ← → mode · R repeat · D details · Esc stop · H help · T tutorial · L language · 1–5 modes</li></ul>
+          <h4>Sounds</h4>
+          <ul><li>Two rising notes — your turn, I'm listening</li>
+              <li>Falling notes — I'm waiting for “Hey IRIS”</li>
+              <li>Beeps while aiming — faster and higher = closer to right</li>
+              <li>Three quick high beeps — locked on</li>
+              <li>Click — picture taken</li>
+              <li>Soft double tick — thinking</li>
+              <li>Three rising notes — answer ready</li>
+              <li>Low falling tone — something went wrong</li></ul>
+        </div>
+      </details>
+    </div>
+  </main>
+
+  <div id="srLive" class="sr-only" aria-live="off"></div>
+
+  <div class="debug glass-strong" id="debug" hidden>
+    <header><span>Debug timeline</span>
+      <button class="btn glass" id="dbgCopy">Copy</button>
+      <button class="btn glass" id="dbgClear">Clear</button>
+      <button class="btn glass" id="dbgClose" aria-label="Close debug">✕</button>
+    </header>
+    <pre id="dbgList"></pre>
+  </div>
+</div>
+
+<dialog id="settings" class="glass-strong">
   <form method="dialog">
-    <h2>⚙ HELPER SETTINGS</h2>
-    <label for="sKey">GEMINI API KEY (stored only on this device)</label>
-    <input id="sKey" type="password" placeholder="Paste API key from aistudio.google.com" autocomplete="off">
-    <label for="sLang">LANGUAGE</label>
-    <select id="sLang"><option value="en">English</option><option value="ur">اردو (Urdu)</option></select>
-    <label for="sModel">AI MODEL</label>
-    <select id="sModel">
-      <option value="auto">Best: Gemini 3.8 Flash → Gemma 4 backup (recommended)</option>
+    <h2>Helper settings</h2>
+    <label for="sKey">Gemini API key (stored only on this device)</label>
+    <input class="field" id="sKey" type="password" autocomplete="off" placeholder="From aistudio.google.com">
+    <div class="row" style="justify-content:flex-start;margin-top:8px">
+      <button type="button" class="btn glass" id="checkModels">Check models</button>
+    </div>
+    <div class="modelcheck" id="modelCheck"></div>
+
+    <label for="sModel">AI model</label>
+    <select class="field" id="sModel">
+      <option value="auto">Best: Gemini 3.8 Flash → Gemma 4 backup</option>
       <option value="fast">Fast: Gemini 3.5 Flash-Lite → Gemma 4 backup</option>
       <option value="gemini">Gemini 3.8 Flash only</option>
       <option value="gemma">Gemma 4 only (open-weight)</option>
     </select>
-    <label for="sRate">SPEAKING SPEED</label>
-    <input id="sRate" type="range" min="0.6" max="1.6" step="0.05">
+    <label for="sCustom">Custom first model ID (optional — if “Check models” shows a different name)</label>
+    <input class="field" id="sCustom" type="text" autocomplete="off" placeholder="e.g. gemini-3.8-flash">
+
+    <label for="sLang">Language</label>
+    <select class="field" id="sLang"><option value="en">English</option><option value="ur">اردو (Urdu)</option></select>
+    <label for="sRate">Speaking speed</label>
+    <input id="sRate" type="range" min="0.6" max="1.6" step="0.05" style="width:100%">
+    <label for="sListen">Listening</label>
+    <select class="field" id="sListen">
+      <option value="auto">After 20 s of silence, wait for “Hey IRIS” (recommended)</option>
+      <option value="always">Always listening (quiet rooms only)</option>
+    </select>
+    <label for="sCam">Camera</label>
+    <select class="field" id="sCam">
+      <option value="auto">Detect automatically</option>
+      <option value="environment">Phone back camera (move the phone)</option>
+      <option value="user">Laptop / front camera (move the object)</option>
+    </select>
+    <div class="check"><input type="checkbox" id="sHc"><label for="sHc" style="margin:0">High contrast (black and yellow)</label></div>
+    <div class="check"><input type="checkbox" id="sSr"><label for="sSr" style="margin:0">Screen reader also announces answers (TalkBack)</label></div>
+    <div class="check"><input type="checkbox" id="sDuplex"><label for="sDuplex" style="margin:0">Allow voice interrupt (headphones only)</label></div>
     <div class="note" id="voiceInfo"></div>
+    <div class="note"><b>TalkBack:</b> IRIS speaks for itself, so it works best with TalkBack paused (TalkBack menu → “Pause feedback”, or the volume-key shortcut). With TalkBack on: double-tap anywhere = talk, and use voice for everything else. Turn on “Screen reader also announces answers” only if IRIS’s own voice is off.</div>
     <div class="row">
-      <button class="ghost" value="cancel">CLOSE</button>
-      <button class="btn" id="saveBtn" value="save">SAVE</button>
+      <button type="button" class="btn glass" id="openDebug">Debug panel</button>
+      <button class="btn glass" value="cancel">Close</button>
+      <button class="btn primary" style="min-height:48px" value="save" id="saveBtn">Save</button>
     </div>
   </form>
 </dialog>
@@ -257,137 +424,247 @@
 <script>
 "use strict";
 /* =====================================================================
-   IRIS – hands-free voice vision agent
-   Flow:  LISTEN → (command) → AIM (spoken tips + beeps) → auto CAPTURE
-          → THINK (Gemma 4) → SPEAK result → LISTEN …
+   IRIS v2 — hands-free talking eyes
+   Sections:
+     0 Config · 1 Settings · 2 Phrases · 3 Debug · 4 State machine
+     5 Sounds · 6 Voice (speech out) · 7 Mic (speech in) + watchdog
+     8 Commands · 9 Camera + aiming · 10 AI · 11 Flows · 12 Input
+     13 Screen · 14 Settings dialog · 15 Boot
    ===================================================================== */
-// AI models (all on the free tier of the Gemini API, same key). Names shown to people:
+
+/* ===================== 0. CONFIG ===================== */
 const MODELS = {
   "gemini-3.8-flash": "Gemini 3.8 Flash",
   "gemini-3.5-flash-lite": "Gemini 3.5 Flash-Lite",
-  "gemma-4-26b-a4b-it": "Gemma 4 (open-weight)"
+  "gemma-4-26b-a4b-it": "Gemma 4"
 };
-// Which models to try, in order. If one fails or hits its limit, IRIS moves to the next.
-const MODEL_CHAINS = {
-  auto:  ["gemini-3.8-flash", "gemma-4-26b-a4b-it"],                       // best accuracy, Gemma as backup
-  fast:  ["gemini-3.5-flash-lite", "gemma-4-26b-a4b-it"],                  // quickest answers
-  gemini:["gemini-3.8-flash"],
-  gemma: ["gemma-4-26b-a4b-it"]                                            // open-weight only
+const MODEL_CHAINS = {                       // tried in order; on failure IRIS moves to the next
+  auto:   ["gemini-3.8-flash", "gemma-4-26b-a4b-it"],
+  fast:   ["gemini-3.5-flash-lite", "gemma-4-26b-a4b-it"],
+  gemini: ["gemini-3.8-flash"],
+  gemma:  ["gemma-4-26b-a4b-it"]
 };
-const PROXY_URL = "api/generate";           // used when no key is saved and the page is hosted with a server (e.g. Vercel)
+const PROXY_URL = "api/generate";            // used when no key is saved and the page is hosted with a server (Vercel)
+const READY_WINDOW_MS = 20000;               // silence before IRIS goes back to waiting for "Hey IRIS"
+const AI_TIMEOUT_MS = 45000;
+const MODES = ["identify", "read", "medicine", "money", "describe"];
+const LISTEN_STATES = new Set(["ready", "waiting", "aiming", "thinking"]);
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const $ = (id) => document.getElementById(id);
+const now = () => Date.now();
 
-const S = {
-  started: false, state: "idle", mode: "identify", lang: "en", rate: 1,
-  stream: null, facing: "user", image: null, imageTime: 0, history: [],
-  model: "auto", usedModel: "",
-  lastReply: null, pendingQuestion: "", queued: "", retries: 0, hintCount: 0, tutorialDone: false, abort: null
-};
-try {
-  const p = JSON.parse(localStorage.getItem("iris_prefs") || "{}");
-  if (p.lang) S.lang = p.lang; if (p.rate) S.rate = p.rate; S.tutorialDone = !!p.tut; if (p.model) S.model = p.model;
-} catch (e) {}
-function savePrefs() { try { localStorage.setItem("iris_prefs", JSON.stringify({ lang: S.lang, rate: S.rate, tut: S.tutorialDone, model: S.model })); } catch (e) {} }
+/* ===================== 1. SETTINGS (saved on this device) ===================== */
+function loadPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem("iris2_prefs") || "null");
+    if (p) return p;
+    const old = JSON.parse(localStorage.getItem("iris_prefs") || "{}");   // carry over v1 settings
+    return { lang: old.lang, rate: old.rate, model: old.model };
+  } catch (e) { return {}; }
+}
+const P = { lang: "en", rate: 1, model: "auto", customModel: "", listen: "auto", camera: "auto",
+  hc: false, sr: false, duplex: false, introDone: false, aimHelp: false, hints: 0 };
+for (const [k, v] of Object.entries(loadPrefs())) if (v !== undefined && v !== null) P[k] = v;
+function savePrefs() { try { localStorage.setItem("iris2_prefs", JSON.stringify(P)); } catch (e) {} }
 
-// A helper can set the key with a link: index.html?key=XXXX (saved, then removed from the address bar)
+// A helper can set the key with a link once: index.html?key=XXXX (saved, then removed from the address bar)
 (function () {
   try {
-    const u = new URL(location.href); const k = u.searchParams.get("key");
+    const u = new URL(location.href), k = u.searchParams.get("key");
     if (k) { localStorage.setItem("iris_key", k); u.searchParams.delete("key"); history.replaceState(null, "", u.toString()); }
   } catch (e) {}
 })();
 function getKey() { try { return (localStorage.getItem("iris_key") || "").trim(); } catch (e) { return ""; } }
 
-/* ===================== PHRASES (English / Urdu / Urdu-in-Devanagari for Hindi voices) ===================== */
+/* ===================== 2. PHRASES  (en / ur / hi = Urdu words in Devanagari for Hindi voices) ===================== */
 const T = {
-  starting: { en: "Starting IRIS. I need the camera and the microphone. If a permission box appears, please allow it. If you can't find it, ask someone to tap Allow once. I will remember it.",
-              ur: "آئرس شروع ہو رہا ہے۔ مجھے کیمرا اور مائیک چاہیے۔ اجازت کا خانہ آئے تو اجازت دیں۔ اگر نہ ملے تو کسی سے ایک بار اجازت دبانے کو کہیں۔",
-              hi: "आइरिस शुरू हो रहा है। मुझे कैमरा और माइक चाहिए। इजाज़त का ख़ाना आए तो इजाज़त दें। अगर न मिले तो किसी से एक बार इजाज़त दबाने को कहें।" },
-  welcome:  { en: "Hello, I'm IRIS, your talking eyes. Whenever you need me, say Hey IRIS, or tap anywhere on the screen. Then tell me what to do: what is this, read, medicine, money, or around me. You can also ask any question. I'm listening now.",
-              ur: "السلام علیکم، میں آئرس ہوں، آپ کی بولنے والی آنکھیں۔ جب بھی ضرورت ہو، ہیلو آئرس کہیں، یا اسکرین پر کہیں بھی ٹیپ کریں۔ پھر بتائیں کیا کرنا ہے: یہ کیا ہے، پڑھو، دوا، پیسے، یا ارد گرد دیکھو۔ آپ کوئی بھی سوال پوچھ سکتے ہیں۔ میں ابھی سن رہا ہوں۔",
-              hi: "अस्सलामु अलैकुम, मैं आइरिस हूं, आपकी बोलने वाली आंखें। जब भी ज़रूरत हो, हेलो आइरिस कहें, या स्क्रीन पर कहीं भी टैप करें। फिर बताएं क्या करना है: यह क्या है, पढ़ो, दवा, पैसे, या इर्द गिर्द देखो। आप कोई भी सवाल पूछ सकते हैं। मैं अभी सुन रहा हूं।" },
-  help:     { en: "To wake me, say Hey IRIS, Listen, or Hello, or tap anywhere on the screen. Then you can say: what is this, read, medicine, money, or around me. Say repeat to hear again, details for more, and stop to make me quiet. Say slower or faster, or Urdu or English. Say thank you when you are done. Tap the screen while I'm talking to stop me. Hold the screen to hear the last answer again.",
-              ur: "مجھے جگانے کے لیے ہیلو آئرس، سنو، یا ہیلو کہیں، یا اسکرین پر کہیں بھی ٹیپ کریں۔ پھر آپ کہہ سکتے ہیں: یہ کیا ہے، پڑھو، دوا، پیسے، یا ارد گرد دیکھو۔ دوبارہ سننے کے لیے دوبارہ کہیں، مزید کے لیے تفصیل، اور خاموش کرنے کے لیے رکو۔ آہستہ یا تیز، یا انگریزی یا اردو کہیں۔ کام ختم ہو تو شکریہ کہیں۔ میں بول رہا ہوں تو روکنے کے لیے اسکرین ٹیپ کریں۔ آخری جواب دوبارہ سننے کے لیے اسکرین دبا کر رکھیں۔",
-              hi: "मुझे जगाने के लिए हेलो आइरिस, सुनो, या हेलो कहें, या स्क्रीन पर कहीं भी टैप करें। फिर आप कह सकते हैं: यह क्या है, पढ़ो, दवा, पैसे, या इर्द गिर्द देखो। दोबारा सुनने के लिए दोबारा कहें, मज़ीद के लिए तफ़सील, और ख़ामोश करने के लिए रुको। आहिस्ता या तेज़, या अंग्रेज़ी या उर्दू कहें। काम ख़त्म हो तो शुक्रिया कहें। मैं बोल रहा हूं तो रोकने के लिए स्क्रीन टैप करें। आख़िरी जवाब दोबारा सुनने के लिए स्क्रीन दबा कर रखें।" },
-  yes:      { en: "Yes? I'm listening.", ur: "جی؟ میں سن رہا ہوں۔", hi: "जी? मैं सुन रहा हूं।" },
-  anything: { en: "Anything else? Ask me now. Later, just say Hey IRIS, or tap anywhere on the screen.",
-              ur: "اور کچھ؟ ابھی پوچھیں۔ بعد میں ہیلو آئرس کہیں، یا اسکرین پر کہیں بھی ٹیپ کریں۔",
-              hi: "और कुछ? अभी पूछें। बाद में हेलो आइरिस कहें, या स्क्रीन पर कहीं भी टैप करें।" },
-  anythingShort: { en: "Anything else?", ur: "اور کچھ؟", hi: "और कुछ?" },
-  sleeping: { en: "I'll wait. Say Hey IRIS, or tap the screen, when you need me.", ur: "میں انتظار کر رہا ہوں۔ جب ضرورت ہو ہیلو آئرس کہیں، یا اسکرین ٹیپ کریں۔", hi: "मैं इंतज़ार कर रहा हूं। जब ज़रूरत हो हेलो आइरिस कहें, या स्क्रीन टैप करें।" },
-  bye:      { en: "You're welcome. Say Hey IRIS whenever you need me.", ur: "کوئی بات نہیں۔ جب ضرورت ہو ہیلو آئرس کہیں۔", hi: "कोई बात नहीं। जब ज़रूरत हो हेलो आइरिस कहें।" },
-  tutorial: { en: "I'll guide you with short tips and beeps. Faster, higher beeps mean you are getting closer to the right position. When it's ready, I take the picture by myself. You can also say: take it.",
-              ur: "میں آپ کو مختصر ہدایات اور بیپ سے رہنمائی دوں گا۔ تیز اور اونچی بیپ کا مطلب ہے آپ صحیح جگہ کے قریب ہیں۔ تیار ہونے پر میں خود تصویر لے لوں گا۔ آپ تصویر لو بھی کہہ سکتے ہیں۔",
-              hi: "मैं आपको मुख़्तसर हिदायात और बीप से रहनुमाई दूंगा। तेज़ और ऊंची बीप का मतलब है आप सही जगह के क़रीब हैं। तैयार होने पर मैं ख़ुद तस्वीर ले लूंगा। आप तस्वीर लो भी कह सकते हैं।" },
-  stopped:  { en: "Okay, stopped. I'm listening.", ur: "ٹھیک ہے، رک گیا۔ میں سن رہا ہوں۔", hi: "ठीक है, रुक गया। मैं सुन रहा हूं।" },
-  nothing:  { en: "There's nothing to repeat yet. Say what is this to start.", ur: "ابھی دہرانے کے لیے کچھ نہیں ہے۔ شروع کرنے کے لیے کہیں: یہ کیا ہے۔", hi: "अभी दोहराने के लिए कुछ नहीं है। शुरू करने के लिए कहें: यह क्या है।" },
-  noDetails:{ en: "There are no more details.", ur: "مزید تفصیل نہیں ہے۔", hi: "मज़ीद तफ़सील नहीं है।" },
-  busy:     { en: "I'm still working on it. Please wait a moment.", ur: "میں ابھی کام کر رہا ہوں۔ تھوڑا انتظار کریں۔", hi: "मैं अभी काम कर रहा हूं। थोड़ा इंतज़ार करें।" },
-  next:     { en: "Okay, I'll answer that next.", ur: "ٹھیک ہے، اس کے بعد یہ جواب دوں گا۔", hi: "ठीक है, इसके बाद यह जवाब दूंगा।" },
-  noted:    { en: "Okay, I'll answer that once I take the picture.", ur: "ٹھیک ہے، تصویر لینے کے بعد اس کا جواب دوں گا۔", hi: "ठीक है, तस्वीर लेने के बाद इसका जवाब दूंगा।" },
-  noSR:     { en: "Voice commands don't work in this browser. Please use Google Chrome. You can still tap the screen to scan.",
-              ur: "اس براؤزر میں آواز سے حکم کام نہیں کرتے۔ گوگل کروم استعمال کریں۔ آپ اسکرین ٹیپ کر کے بھی اسکین کر سکتے ہیں۔",
-              hi: "इस ब्राउज़र में आवाज़ से हुक्म काम नहीं करते। गूगल क्रोम इस्तेमाल करें। आप स्क्रीन टैप कर के भी स्कैन कर सकते हैं।" },
-  micBlocked:{ en: "I can't hear you, because the microphone is blocked. Ask someone to allow the microphone. You can still tap the screen to scan.",
-              ur: "مائیک بند ہے اس لیے میں آپ کو نہیں سن سکتا۔ کسی سے مائیک کی اجازت دلوائیں۔ آپ اسکرین ٹیپ کر کے بھی اسکین کر سکتے ہیں۔",
-              hi: "माइक बंद है इसलिए मैं आपको नहीं सुन सकता। किसी से माइक की इजाज़त दिलवाएं। आप स्क्रीन टैप कर के भी स्कैन कर सकते हैं।" },
-  voiceNet: { en: "Voice commands need an internet connection.", ur: "آواز کے احکام کے لیے انٹرنیٹ ضروری ہے۔", hi: "आवाज़ के अहकाम के लिए इंटरनेट ज़रूरी है।" },
-  camFail:  { en: "I couldn't open the camera. Ask someone to allow camera access.", ur: "کیمرا نہیں کھل سکا۔ کسی سے کیمرے کی اجازت دلوائیں۔", hi: "कैमरा नहीं खुल सका। किसी से कैमरे की इजाज़त दिलवाएं।" },
-  noKey:    { en: "I'm not set up yet. A sighted helper needs to add the API key once in settings.",
-              ur: "میں ابھی سیٹ اپ نہیں ہوں۔ کسی دیکھنے والے مددگار کو ایک بار سیٹنگز میں اے پی آئی کی ڈالنی ہوگی۔",
-              hi: "मैं अभी सेटअप नहीं हूं। किसी देखने वाले मददगार को एक बार सेटिंग्स में ए पी आई की डालनी होगी।" },
-  noNet:    { en: "There's no internet connection. Please check it and try again.", ur: "انٹرنیٹ کنکشن نہیں ہے۔ چیک کر کے دوبارہ کوشش کریں۔", hi: "इंटरनेट कनेक्शन नहीं है। चेक कर के दोबारा कोशिश करें।" },
-  error:    { en: "Sorry, something went wrong. Say try again, or tap the screen.", ur: "معاف کیجیے، کچھ غلط ہو گیا۔ دوبارہ کوشش کہیں، یا اسکرین ٹیپ کریں۔", hi: "माफ़ कीजिए, कुछ ग़लत हो गया। दोबारा कोशिश कहें, या स्क्रीन टैप करें।" },
-  still:    { en: "Still working.", ur: "ابھی کام جاری ہے۔", hi: "अभी काम जारी है।" },
-  timeout:  { en: "I'll take the picture now and do my best.", ur: "میں اب تصویر لے رہا ہوں، پوری کوشش کروں گا۔", hi: "मैं अब तस्वीर ले रहा हूं, पूरी कोशिश करूंगा।" },
-  retake:   { en: "I couldn't see it clearly.", ur: "مجھے صاف نظر نہیں آیا۔", hi: "मुझे साफ़ नज़र नहीं आया।" },
-  afterHint:{ en: "Say repeat to hear it again, details for more, or ask me a question.", ur: "دوبارہ سننے کے لیے دوبارہ کہیں، مزید کے لیے تفصیل کہیں، یا مجھ سے سوال پوچھیں۔", hi: "दोबारा सुनने के लिए दोबारा कहें, मज़ीद के लिए तफ़सील कहें, या मुझ से सवाल पूछें।" },
-  slower:   { en: "Okay, speaking slower.", ur: "ٹھیک ہے، آہستہ بولوں گا۔", hi: "ठीक है, आहिस्ता बोलूंगा।" },
-  faster:   { en: "Okay, speaking faster.", ur: "ٹھیک ہے، تیز بولوں گا۔", hi: "ठीक है, तेज़ बोलूंगा।" },
-  langUr:   { en: "Urdu selected.", ur: "اردو منتخب ہو گئی۔ اب آپ اردو میں بات کریں۔", hi: "उर्दू मुंतख़ब हो गई। अब आप उर्दू में बात करें।" },
-  langEn:   { en: "English selected. You can speak in English now.", ur: "English selected.", hi: "" },
+  introFirst: { en: "Hi, I'm IRIS. I'll be your eyes. Just tell me what you need, like: what is this, or read. Say tutorial any time to learn more.",
+                ur: "السلام علیکم، میں آئرس ہوں، میں آپ کی آنکھیں بنوں گا۔ بس بتائیں کیا چاہیے، جیسے: یہ کیا ہے، یا پڑھو۔ مزید جاننے کے لیے کبھی بھی ٹیوٹوریل کہیں۔",
+                hi: "अस्सलामु अलैकुम, मैं आइरिस हूं, मैं आपकी आंखें बनूंगा। बस बताएं क्या चाहिए, जैसे: यह क्या है, या पढ़ो। मज़ीद जानने के लिए कभी भी ट्यूटोरियल कहें।" },
+  perm:       { en: "First, I need the camera and microphone. If a box appears, please allow it, or ask someone to tap Allow.",
+                ur: "پہلے مجھے کیمرا اور مائیک چاہیے۔ اجازت کا خانہ آئے تو اجازت دیں، یا کسی سے اجازت دبانے کو کہیں۔",
+                hi: "पहले मुझे कैमरा और माइक चाहिए। इजाज़त का ख़ाना आए तो इजाज़त दें, या किसी से इजाज़त दबाने को कहें।" },
+  introBack:  { en: "IRIS is on.", ur: "آئرس تیار ہے۔", hi: "आइरिस तैयार है।" },
+  ready:      { en: "Ready. What should I look at?", ur: "تیار ہوں۔ میں کیا دیکھوں؟", hi: "तैयार हूं। मैं क्या देखूं?" },
+  yes:        { en: "Yes?", ur: "جی؟", hi: "जी?" },
+  back:       { en: "I'm back. Ready.", ur: "میں واپس آ گیا۔ تیار ہوں۔", hi: "मैं वापस आ गया। तैयार हूं।" },
+  waiting:    { en: "I'll wait. Say Hey IRIS, or tap the screen, when you need me.", ur: "میں انتظار کر رہا ہوں۔ جب ضرورت ہو ہیلو آئرس کہیں، یا اسکرین ٹیپ کریں۔", hi: "मैं इंतज़ार कर रहा हूं। जब ज़रूरत हो हेलो आइरिस कहें, या स्क्रीन टैप करें।" },
+  bye:        { en: "You're welcome. Say Hey IRIS whenever you need me.", ur: "کوئی بات نہیں۔ جب ضرورت ہو ہیلو آئرس کہیں۔", hi: "कोई बात नहीं। जब ज़रूरत हो हेलो आइरिस कहें।" },
+  stopped:    { en: "Stopped.", ur: "رک گیا۔", hi: "रुक गया।" },
+  afterHint:  { en: "Say repeat, details, or ask me something.", ur: "دوبارہ یا تفصیل کہیں، یا مجھ سے کچھ پوچھیں۔", hi: "दोबारा या तफ़सील कहें, या मुझ से कुछ पूछें।" },
+  help:       { en: "Say: what is this, read, medicine, money, or around me. Then: repeat, details, stop, slower, faster, Urdu, or English. Or ask any question. Say tutorial for the full guide.",
+                ur: "کہیں: یہ کیا ہے، پڑھو، دوا، پیسے، یا ارد گرد دیکھو۔ پھر: دوبارہ، تفصیل، رکو، آہستہ، تیز، اردو یا انگریزی۔ یا کوئی بھی سوال پوچھیں۔ پوری رہنمائی کے لیے ٹیوٹوریل کہیں۔",
+                hi: "कहें: यह क्या है, पढ़ो, दवा, पैसे, या इर्द गिर्द देखो। फिर: दोबारा, तफ़सील, रुको, आहिस्ता, तेज़, उर्दू या अंग्रेज़ी। या कोई भी सवाल पूछें। पूरी रहनुमाई के लिए ट्यूटोरियल कहें।" },
+  tutorial:   { en: "Here is how I work. First, tell me what you need: what is this, read, medicine, money, or around me. Then point the camera toward it. I guide you with one short tip at a time, and with beeps. Faster, higher beeps mean you are closer. Three quick high beeps mean I am locked on, and a click means I took the picture. Then I think for a few seconds, with soft ticks, and tell you the answer. Warnings always come first. After that, two rising notes mean it is your turn to speak: say repeat, details, or ask a question. Tap the screen any time to stop me talking. Double-tap to scan. Swipe left or right to change mode. Hold the screen to hear the last answer again. If you are quiet for a while, I wait until you say Hey IRIS. When you are done, say thank you.",
+                ur: "میں ایسے کام کرتا ہوں۔ پہلے بتائیں کیا چاہیے: یہ کیا ہے، پڑھو، دوا، پیسے، یا ارد گرد دیکھو۔ پھر کیمرا اس کی طرف کریں۔ میں ایک وقت میں ایک مختصر ہدایت اور بیپ سے رہنمائی کرتا ہوں۔ تیز اور اونچی بیپ کا مطلب ہے آپ قریب ہیں۔ تین تیز اونچی بیپ کا مطلب ہے نشانہ ٹھیک ہے، اور کلک کا مطلب ہے تصویر لے لی۔ پھر میں چند سیکنڈ سوچتا ہوں، ہلکی ٹک ٹک کے ساتھ، اور جواب بتاتا ہوں۔ خطرے کی بات ہمیشہ پہلے بتاتا ہوں۔ اس کے بعد دو اوپر جاتی آوازوں کا مطلب ہے اب آپ بولیں: دوبارہ، تفصیل، یا کوئی سوال۔ مجھے روکنے کے لیے کبھی بھی اسکرین ٹیپ کریں۔ اسکین کے لیے دو بار ٹیپ کریں۔ موڈ بدلنے کے لیے دائیں یا بائیں سوائپ کریں۔ آخری جواب دوبارہ سننے کے لیے اسکرین دبا کر رکھیں۔ کچھ دیر خاموشی ہو تو میں ہیلو آئرس کا انتظار کرتا ہوں۔ کام ختم ہو تو شکریہ کہیں۔",
+                hi: "मैं ऐसे काम करता हूं। पहले बताएं क्या चाहिए: यह क्या है, पढ़ो, दवा, पैसे, या इर्द गिर्द देखो। फिर कैमरा उसकी तरफ़ करें। मैं एक वक़्त में एक मुख़्तसर हिदायत और बीप से रहनुमाई करता हूं। तेज़ और ऊंची बीप का मतलब है आप क़रीब हैं। तीन तेज़ ऊंची बीप का मतलब है निशाना ठीक है, और क्लिक का मतलब है तस्वीर ले ली। फिर मैं चंद सेकंड सोचता हूं, हल्की टिक टिक के साथ, और जवाब बताता हूं। ख़तरे की बात हमेशा पहले बताता हूं। इसके बाद दो ऊपर जाती आवाज़ों का मतलब है अब आप बोलें: दोबारा, तफ़सील, या कोई सवाल। मुझे रोकने के लिए कभी भी स्क्रीन टैप करें। स्कैन के लिए दो बार टैप करें। मोड बदलने के लिए दाएं या बाएं स्वाइप करें। आख़िरी जवाब दोबारा सुनने के लिए स्क्रीन दबा कर रखें। कुछ देर ख़ामोशी हो तो मैं हेलो आइरिस का इंतज़ार करता हूं। काम ख़त्म हो तो शुक्रिया कहें।" },
+  aimHelp:    { en: "I'll guide you with one tip at a time and with beeps. Faster beeps mean closer. Three quick beeps mean locked on.",
+                ur: "میں ایک وقت میں ایک ہدایت اور بیپ سے رہنمائی کروں گا۔ تیز بیپ کا مطلب قریب۔ تین تیز بیپ کا مطلب نشانہ ٹھیک ہے۔",
+                hi: "मैं एक वक़्त में एक हिदायत और बीप से रहनुमाई करूंगा। तेज़ बीप का मतलब क़रीब। तीन तेज़ बीप का मतलब निशाना ठीक है।" },
+  nothing:    { en: "There's nothing to repeat yet. Say what is this to start.", ur: "ابھی دہرانے کے لیے کچھ نہیں ہے۔ شروع کرنے کے لیے کہیں: یہ کیا ہے۔", hi: "अभी दोहराने के लिए कुछ नहीं है। शुरू करने के लिए कहें: यह क्या है।" },
+  noDetails:  { en: "There are no more details.", ur: "مزید تفصیل نہیں ہے۔", hi: "मज़ीद तफ़सील नहीं है।" },
+  still:      { en: "Still working, almost there.", ur: "ابھی کام جاری ہے، بس تھوڑی دیر۔", hi: "अभी काम जारी है, बस थोड़ी देर।" },
+  stillThinking: { en: "Still thinking.", ur: "ابھی سوچ رہا ہوں۔", hi: "अभी सोच रहा हूं।" },
+  queued:     { en: "I'll answer that next.", ur: "اس کے بعد یہ جواب دوں گا۔", hi: "इसके बाद यह जवाब दूंगा।" },
+  noted:      { en: "Okay, I'll answer that after the picture.", ur: "ٹھیک ہے، تصویر کے بعد جواب دوں گا۔", hi: "ठीक है, तस्वीर के बाद जवाब दूंगा।" },
+  retake:     { en: "I couldn't see it clearly.", ur: "مجھے صاف نظر نہیں آیا۔", hi: "मुझे साफ़ नज़र नहीं आया।" },
+  slower:     { en: "Okay, slower.", ur: "ٹھیک ہے، آہستہ۔", hi: "ठीक है, आहिस्ता।" },
+  faster:     { en: "Okay, faster.", ur: "ٹھیک ہے، تیز۔", hi: "ठीक है, तेज़।" },
+  langUr:     { en: "Urdu selected.", ur: "اردو منتخب ہو گئی۔", hi: "उर्दू मुंतख़ब हो गई।" },
+  langEn:     { en: "English selected.", ur: "English selected.", hi: "" },
+  offline:    { en: "The internet connection is off.", ur: "انٹرنیٹ بند ہو گیا ہے۔", hi: "इंटरनेट बंद हो गया है।" },
+  online:     { en: "Back online.", ur: "انٹرنیٹ واپس آ گیا۔", hi: "इंटरनेट वापस आ गया।" },
+  err: {
+    noKey:   { en: "I'm not set up: there's no API key. A sighted helper should add one in Settings.", ur: "میں سیٹ اپ نہیں ہوں، اے پی آئی کی نہیں ہے۔ کوئی مددگار سیٹنگز میں ڈالے۔", hi: "मैं सेटअप नहीं हूं, ए पी आई की नहीं है। कोई मददगार सेटिंग्स में डाले।" },
+    badKey:  { en: "The API key isn't working. A helper should check it in Settings.", ur: "اے پی آئی کی کام نہیں کر رہی۔ کوئی مددگار سیٹنگز میں چیک کرے۔", hi: "ए पी आई की काम नहीं कर रही। कोई मददगार सेटिंग्स में चेक करे।" },
+    network: { en: "No internet connection. Check Wi-Fi or mobile data, then say try again.", ur: "انٹرنیٹ نہیں ہے۔ وائی فائی یا ڈیٹا چیک کریں، پھر دوبارہ کوشش کہیں۔", hi: "इंटरनेट नहीं है। वाई फ़ाई या डेटा चेक करें, फिर दोबारा कोशिश कहें।" },
+    quota:   { en: "The free AI limit is used up for now. Please try again in a minute.", ur: "مفت حد ابھی ختم ہو گئی ہے۔ ایک منٹ بعد دوبارہ کوشش کریں۔", hi: "मुफ़्त हद अभी ख़त्म हो गई है। एक मिनट बाद दोबारा कोशिश करें।" },
+    timeout: { en: "The AI took too long. Say try again, or tap the screen.", ur: "جواب میں بہت دیر لگ گئی۔ دوبارہ کوشش کہیں، یا اسکرین ٹیپ کریں۔", hi: "जवाब में बहुत देर लग गई। दोबारा कोशिश कहें, या स्क्रीन टैप करें।" },
+    ai:      { en: "Something went wrong with the AI. Say try again, or tap the screen.", ur: "اے آئی میں کچھ غلط ہو گیا۔ دوبارہ کوشش کہیں، یا اسکرین ٹیپ کریں۔", hi: "ए आई में कुछ ग़लत हो गया। दोबारा कोशिश कहें, या स्क्रीन टैप करें।" },
+    camera:  { en: "I can't open the camera. A helper should allow camera access, then reload.", ur: "کیمرا نہیں کھل رہا۔ کوئی مددگار کیمرے کی اجازت دے، پھر ری لوڈ کرے۔", hi: "कैमरा नहीं खुल रहा। कोई मददगार कैमरे की इजाज़त दे, फिर री लोड करे।" },
+    mic:     { en: "I can't hear you: the microphone is blocked. A helper should allow it. You can still tap the screen.", ur: "مائیک بند ہے، میں نہیں سن سکتا۔ کوئی مددگار اجازت دے۔ آپ اسکرین ٹیپ کر سکتے ہیں۔", hi: "माइक बंद है, मैं नहीं सुन सकता। कोई मददगार इजाज़त दे। आप स्क्रीन टैप कर सकते हैं।" },
+    noSR:    { en: "Voice commands don't work in this browser. Please use Google Chrome. You can still tap and double-tap the screen.", ur: "اس براؤزر میں آواز سے حکم کام نہیں کرتے۔ گوگل کروم استعمال کریں۔ آپ ٹیپ اور ڈبل ٹیپ کر سکتے ہیں۔", hi: "इस ब्राउज़र में आवाज़ से हुक्म काम नहीं करते। गूगल क्रोम इस्तेमाल करें। आप टैप और डबल टैप कर सकते हैं।" },
+    voiceNet:{ en: "Voice commands need internet. I'll keep trying.", ur: "آواز کے احکام کے لیے انٹرنیٹ ضروری ہے۔ میں کوشش کرتا رہوں گا۔", hi: "आवाज़ के अहकाम के लिए इंटरनेट ज़रूरी है। मैं कोशिश करता रहूंगा।" }
+  },
   tips: {
-    good:        { en: "Good. Hold still.", ur: "بہت اچھا۔ ہلائیں نہیں۔", hi: "बहुत अच्छा। हिलाएं नहीं।" },
-    dark:        { en: "It's too dark. Move to a brighter place or turn on a light.", ur: "روشنی بہت کم ہے۔ روشن جگہ پر جائیں یا لائٹ جلائیں۔", hi: "रौशनी बहुत कम है। रौशन जगह पर जाएं या लाइट जलाएं।" },
+    good:        { en: "Locked on. Hold still.", ur: "نشانہ ٹھیک ہے۔ ہلائیں نہیں۔", hi: "निशाना ठीक है। हिलाएं नहीं।" },
+    dark:        { en: "Too dark. Move to more light.", ur: "روشنی کم ہے۔ روشنی میں جائیں۔", hi: "रौशनी कम है। रौशनी में जाएं।" },
     shaky:       { en: "Hold still.", ur: "ہلائیں نہیں۔", hi: "हिलाएं नहीं।" },
-    nothingEnv:  { en: "I can't see anything clear yet. Point the camera at the object.", ur: "مجھے ابھی کچھ صاف نظر نہیں آ رہا۔ کیمرا چیز کی طرف کریں۔", hi: "मुझे अभी कुछ साफ़ नज़र नहीं आ रहा। कैमरा चीज़ की तरफ़ करें।" },
-    nothingUser: { en: "I can't see anything clear yet. Hold the object in front of the camera.", ur: "مجھے ابھی کچھ صاف نظر نہیں آ رہا۔ چیز کیمرے کے سامنے رکھیں۔", hi: "मुझे अभी कुछ साफ़ नज़र नहीं आ रहा। चीज़ कैमरे के सामने रखें।" },
-    phoneRight:  { en: "Move the phone a little to the right.", ur: "فون تھوڑا دائیں طرف کریں۔", hi: "फ़ोन थोड़ा दाएं तरफ़ करें।" },
-    phoneLeft:   { en: "Move the phone a little to the left.", ur: "فون تھوڑا بائیں طرف کریں۔", hi: "फ़ोन थोड़ा बाएं तरफ़ करें।" },
-    phoneUp:     { en: "Tilt the phone a little up.", ur: "فون تھوڑا اوپر کی طرف کریں۔", hi: "फ़ोन थोड़ा ऊपर की तरफ़ करें।" },
-    phoneDown:   { en: "Tilt the phone a little down.", ur: "فون تھوڑا نیچے کی طرف کریں۔", hi: "फ़ोन थोड़ा नीचे की तरफ़ करें।" },
+    nothingEnv:  { en: "I can't see it yet. Point the phone at the object.", ur: "ابھی نظر نہیں آ رہا۔ فون چیز کی طرف کریں۔", hi: "अभी नज़र नहीं आ रहा। फ़ोन चीज़ की तरफ़ करें।" },
+    nothingUser: { en: "I can't see it yet. Hold the object in front of the camera.", ur: "ابھی نظر نہیں آ رہا۔ چیز کیمرے کے سامنے رکھیں۔", hi: "अभी नज़र नहीं आ रहा। चीज़ कैमरे के सामने रखें।" },
+    phoneRight:  { en: "Move the phone right.", ur: "فون دائیں کریں۔", hi: "फ़ोन दाएं करें।" },
+    phoneLeft:   { en: "Move the phone left.", ur: "فون بائیں کریں۔", hi: "फ़ोन बाएं करें।" },
+    phoneUp:     { en: "Tilt the phone up.", ur: "فون اوپر کی طرف کریں۔", hi: "फ़ोन ऊपर की तरफ़ करें।" },
+    phoneDown:   { en: "Tilt the phone down.", ur: "فون نیچے کی طرف کریں۔", hi: "फ़ोन नीचे की तरफ़ करें।" },
     phoneCloser: { en: "Move the phone closer.", ur: "فون قریب لائیں۔", hi: "फ़ोन क़रीब लाएं।" },
-    phoneBack:   { en: "Too close. Move the phone back a little.", ur: "بہت قریب ہے۔ فون تھوڑا پیچھے کریں۔", hi: "बहुत क़रीब है। फ़ोन थोड़ा पीछे करें।" },
-    objRight:    { en: "Move it a little to your right.", ur: "اسے تھوڑا اپنے دائیں طرف کریں۔", hi: "इसे थोड़ा अपने दाएं तरफ़ करें।" },
-    objLeft:     { en: "Move it a little to your left.", ur: "اسے تھوڑا اپنے بائیں طرف کریں۔", hi: "इसे थोड़ा अपने बाएं तरफ़ करें।" },
-    objUp:       { en: "Raise it a little.", ur: "اسے تھوڑا اوپر اٹھائیں۔", hi: "इसे थोड़ा ऊपर उठाएं।" },
+    phoneBack:   { en: "Too close. Move the phone back.", ur: "بہت قریب۔ فون پیچھے کریں۔", hi: "बहुत क़रीब। फ़ोन पीछे करें।" },
+    objRight:    { en: "Move it to your right.", ur: "اسے اپنے دائیں کریں۔", hi: "इसे अपने दाएं करें।" },
+    objLeft:     { en: "Move it to your left.", ur: "اسے اپنے بائیں کریں۔", hi: "इसे अपने बाएं करें।" },
+    objUp:       { en: "Raise it a little.", ur: "اسے تھوڑا اوپر کریں۔", hi: "इसे थोड़ा ऊपर करें।" },
     objDown:     { en: "Lower it a little.", ur: "اسے تھوڑا نیچے کریں۔", hi: "इसे थोड़ा नीचे करें।" },
-    objCloser:   { en: "Bring it closer to the camera.", ur: "اسے کیمرے کے قریب لائیں۔", hi: "इसे कैमरे के क़रीब लाएं।" },
-    objBack:     { en: "Too close. Move it back a little.", ur: "بہت قریب ہے۔ اسے تھوڑا پیچھے کریں۔", hi: "बहुत क़रीब है। इसे थोड़ा पीछे करें।" }
+    objCloser:   { en: "Bring it closer.", ur: "اسے قریب لائیں۔", hi: "इसे क़रीब लाएं।" },
+    objBack:     { en: "Too close. Move it back.", ur: "بہت قریب۔ اسے پیچھے کریں۔", hi: "बहुत क़रीब। इसे पीछे करें।" }
   },
   intro: {
-    identify: { en: "Okay. Let's see what it is. Hold it about one foot from the camera.", ur: "ٹھیک ہے، دیکھتے ہیں یہ کیا ہے۔ اسے کیمرے سے تقریباً ایک فٹ دور رکھیں۔", hi: "ठीक है, देखते हैं यह क्या है। इसे कैमरे से तक़रीबन एक फ़ुट दूर रखें।" },
-    read:     { en: "Reading mode. Hold the paper flat, about one foot from the camera.", ur: "پڑھنے کا موڈ۔ کاغذ کو سیدھا، کیمرے سے تقریباً ایک فٹ دور رکھیں۔", hi: "पढ़ने का मोड। काग़ज़ को सीधा, कैमरे से तक़रीबन एक फ़ुट दूर रखें।" },
-    medicine: { en: "Medicine mode. Hold the box about eight inches from the camera, and turn it slowly so the name faces the camera.", ur: "دوا کا موڈ۔ ڈبہ کیمرے سے تقریباً آٹھ انچ دور رکھیں اور آہستہ گھمائیں تاکہ نام کیمرے کی طرف ہو۔", hi: "दवा का मोड। डिब्बा कैमरे से तक़रीबन आठ इंच दूर रखें और आहिस्ता घुमाएं ताकि नाम कैमरे की तरफ़ हो।" },
-    money:    { en: "Money mode. Lay the notes flat, side by side, about one foot from the camera.", ur: "پیسوں کا موڈ۔ نوٹ سیدھے، ساتھ ساتھ، کیمرے سے تقریباً ایک فٹ دور رکھیں۔", hi: "पैसों का मोड। नोट सीधे, साथ साथ, कैमरे से तक़रीबन एक फ़ुट दूर रखें।" },
-    describe: { en: "Describing your surroundings. Point the camera straight ahead at chest height and hold still.", ur: "آپ کے ارد گرد کا بیان۔ کیمرے کو سینے کی اونچائی پر سیدھا سامنے رکھیں اور ہلائیں نہیں۔", hi: "आपके इर्द गिर्द का बयान। कैमरे को सीने की ऊंचाई पर सीधा सामने रखें और हिलाएं नहीं।" }
+    identify: { en: "Let's see what it is. Hold it about one foot from the camera.", ur: "دیکھتے ہیں یہ کیا ہے۔ اسے کیمرے سے تقریباً ایک فٹ دور رکھیں۔", hi: "देखते हैं यह क्या है। इसे कैमरे से तक़रीबन एक फ़ुट दूर रखें।" },
+    read:     { en: "Reading. Hold the paper flat, about one foot away.", ur: "پڑھنا۔ کاغذ سیدھا، تقریباً ایک فٹ دور رکھیں۔", hi: "पढ़ना। काग़ज़ सीधा, तक़रीबन एक फ़ुट दूर रखें।" },
+    medicine: { en: "Medicine. Hold the box about eight inches away, and turn it slowly.", ur: "دوا۔ ڈبہ تقریباً آٹھ انچ دور رکھیں اور آہستہ گھمائیں۔", hi: "दवा। डिब्बा तक़रीबन आठ इंच दूर रखें और आहिस्ता घुमाएं।" },
+    money:    { en: "Money. Lay the notes flat, side by side, about one foot away.", ur: "پیسے۔ نوٹ سیدھے، ساتھ ساتھ، تقریباً ایک فٹ دور رکھیں۔", hi: "पैसे। नोट सीधे, साथ साथ, तक़रीबन एक फ़ुट दूर रखें।" },
+    describe: { en: "Around you. Point the camera straight ahead and hold still.", ur: "ارد گرد۔ کیمرا سیدھا سامنے رکھیں اور ہلائیں نہیں۔", hi: "इर्द गिर्द। कैमरा सीधा सामने रखें और हिलाएं नहीं।" }
+  },
+  modeNames: {
+    identify: { en: "What is it", ur: "یہ کیا ہے", hi: "यह क्या है" }, read: { en: "Read", ur: "پڑھنا", hi: "पढ़ना" },
+    medicine: { en: "Medicine", ur: "دوا", hi: "दवा" }, money: { en: "Money", ur: "پیسے", hi: "पैसे" }, describe: { en: "Around me", ur: "ارد گرد", hi: "इर्द गिर्द" }
   }
 };
-const waitPhrase = (s, follow) => follow
-  ? { en: `Let me check. About ${s} seconds.`, ur: `دیکھتا ہوں۔ تقریباً ${s} سیکنڈ۔`, hi: `देखता हूं। तक़रीबन ${s} सेकंड।` }
-  : { en: `Got it. Analyzing now. This takes about ${s} seconds.`, ur: `تصویر مل گئی۔ تجزیہ ہو رہا ہے، تقریباً ${s} سیکنڈ لگیں گے۔`, hi: `तस्वीर मिल गई। तजज़िया हो रहा है, तक़रीबन ${s} सेकंड लगेंगे।` };
+const say_got = (s) => ({ en: `Got it. Thinking, about ${s} seconds.`, ur: `مل گیا۔ سوچ رہا ہوں، تقریباً ${s} سیکنڈ۔`, hi: `मिल गया। सोच रहा हूं, तक़रीबन ${s} सेकंड।` });
+const say_anyway = (s) => ({ en: `Taking it anyway. Thinking, about ${s} seconds.`, ur: `پھر بھی تصویر لے لی۔ تقریباً ${s} سیکنڈ۔`, hi: `फिर भी तस्वीर ले ली। तक़रीबन ${s} सेकंड।` });
+const say_follow = (s) => ({ en: `Let me check. About ${s} seconds.`, ur: `دیکھتا ہوں۔ تقریباً ${s} سیکنڈ۔`, hi: `देखता हूं। तक़रीबन ${s} सेकंड।` });
+const say_mode = (m) => { const n = T.modeNames[m]; return { en: `${n.en}. Double-tap to start.`, ur: `${n.ur}۔ شروع کرنے کے لیے دو بار ٹیپ کریں۔`, hi: `${n.hi}। शुरू करने के लिए दो बार टैप करें।` }; };
 
-/* ===================== VOICE OUTPUT (text-to-speech) ===================== */
-const Speech = {
-  voices: [], gen: 0, chain: Promise.resolve(), speaking: false, lastText: "", lastEnd: 0, warned: false,
-  ready() {
+/* ===================== 3. DEBUG TIMELINE (?debug=1, 5 taps on the logo, or the ` key) ===================== */
+const Dbg = {
+  items: [], open: false,
+  add(cat, msg) {
+    const d = new Date();
+    const line = `${d.toTimeString().slice(0, 8)}.${String(d.getMilliseconds()).padStart(3, "0")}  ${cat.padEnd(6)} ${msg}`;
+    this.items.push(line); if (this.items.length > 500) this.items.shift();
+    if (this.open) this.render();
+  },
+  render() { const el = $("dbgList"); el.textContent = this.items.slice(-250).join("\n"); el.scrollTop = el.scrollHeight; },
+  toggle(on) { this.open = on === undefined ? !this.open : on; $("debug").hidden = !this.open; if (this.open) this.render(); }
+};
+window.addEventListener("error", (e) => Dbg.add("JSERR", e.message + " @" + (e.lineno || "?")));
+window.addEventListener("unhandledrejection", (e) => Dbg.add("JSERR", "promise: " + ((e.reason && e.reason.message) || e.reason)));
+
+/* ===================== 4. STATE MACHINE (single source of truth) =====================
+   boot → ready ⇄ waiting
+   ready → aiming → capturing → thinking → answering → ready
+   any → error → ready ;  any → paused (tab hidden) → ready                                  */
+const S = {
+  booted: false, state: "boot", stateAt: now(), mode: "identify", stream: null, facing: "user",
+  image: null, imageTime: 0, history: [], lastReply: null, pendingQuestion: "", queued: "", retries: 0,
+  scanId: 0, abort: null, abortWhy: "", usedModel: "", pendingAnswer: null, thinkT0: 0, thinkEst: 0,
+  lastTip: "", lastTipObj: null, lastError: ""
+};
+function go(next, why = "") {
+  const prev = S.state;
+  if (prev === next) { UI.render(); return; }
+  S.state = next; S.stateAt = now();
+  Dbg.add("STATE", `${prev} → ${next}${why ? "  (" + why + ")" : ""}`);
+  if (next !== "aiming") Aim.stop();
+  if (next === "ready") { Mic.cueNext = true; Conv.arm(); } else Conv.clear();
+  if (next === "waiting") Sound.sleep();
+  UI.render(); Mic.sync();
+}
+// "Ready" turns into "Waiting for Hey IRIS" after a quiet period (unless Always listening is chosen)
+const Conv = {
+  t: null, saidOnce: false,
+  arm(ms = READY_WINDOW_MS) { clearTimeout(this.t); if (P.listen !== "auto") return; this.t = setTimeout(() => this.fire(), ms); },
+  clear() { clearTimeout(this.t); },
+  extend() { if (S.state === "ready") this.arm(); },
+  fire() {
+    if (S.state !== "ready") return;
+    if (Voice.busy || !Mic.live) return this.arm(3000);        // only count real listening time
+    go("waiting", "quiet");
+    if (!this.saidOnce) { this.saidOnce = true; Voice.say(T.waiting); }
+  }
+};
+// Safety net: no state may hang
+function stateWatchdog() {
+  const age = now() - S.stateAt;
+  if (S.state === "capturing" && age > 8000) go("ready", "watchdog: capture stuck");
+  else if (S.state === "answering" && !Voice.busy && age > 4000) go("ready", "watchdog: answer finished");
+  else if (S.state === "error" && !Voice.busy && age > 4000) go("ready", "watchdog: error finished");
+  else if (S.state === "aiming" && !Aim.timer && !Voice.busy && age > 6000) { Dbg.add("WATCH", "aim loop missing — restarting"); Aim.start(); }
+  else if (S.state === "thinking" && !S.abort && age > 3000) go("ready", "watchdog: thinking without request");
+}
+
+/* ===================== 5. SOUNDS — each event has its own sound ===================== */
+const Sound = {
+  ctx: null,
+  init() { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); this.ctx.resume(); } catch (e) {} },
+  tone(f, d = 0.1, type = "sine", v = 0.12, at = 0) {
+    const c = this.ctx; if (!c) return;
+    if (c.state === "suspended") c.resume();
+    const t = c.currentTime + at, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + d + 0.03);
+  },
+  noise(d = 0.06, v = 0.2) {
+    const c = this.ctx; if (!c) return;
+    const b = c.createBuffer(1, Math.floor(c.sampleRate * d), c.sampleRate), ch = b.getChannelData(0);
+    for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / ch.length);
+    const s = c.createBufferSource(), g = c.createGain(); s.buffer = b; g.gain.value = v; s.connect(g).connect(c.destination); s.start();
+  },
+  listen()  { this.tone(660, 0.09); this.tone(990, 0.13, "sine", 0.12, 0.1); },                       // your turn
+  sleep()   { this.tone(784, 0.12, "sine", 0.06); this.tone(523, 0.2, "sine", 0.05, 0.13); },          // waiting for wake word
+  aim(s)    { this.tone(420 + s * 900, 0.05, "sine", 0.1); },                                          // aiming beep
+  locked()  { [0, 0.09, 0.18].forEach((a) => this.tone(1320, 0.05, "square", 0.06, a)); },            // locked on
+  shutter() { this.noise(0.07, 0.25); this.tone(1800, 0.03, "square", 0.04, 0.02); },                  // picture taken
+  tick()    { this.tone(520, 0.05, "sine", 0.045); this.tone(390, 0.05, "sine", 0.045, 0.08); },        // thinking
+  success() { [523, 659, 784].forEach((f, i) => this.tone(f, 0.14, "sine", 0.12, i * 0.1)); },          // answer ready
+  error()   { this.tone(330, 0.18, "triangle", 0.13); this.tone(220, 0.28, "triangle", 0.13, 0.2); },   // problem
+  blip()    { this.tone(700, 0.06, "sine", 0.1); }                                                     // mode changed
+};
+const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+
+/* ===================== 6. VOICE — one speech queue with guarantees =====================
+   - waits a moment after cancel() (Chrome drops the next sentence otherwise)
+   - checks that speech really started (onstart) and retries once
+   - every sentence has a timeout, so a missing onend can never freeze IRIS
+   - while IRIS talks, the microphone is OFF (half-duplex) → it can't hear itself         */
+const Voice = {
+  q: [], cur: null, busy: false, gen: 0, voices: [], lastText: "", lastEnd: 0, lastCancel: 0, warned: false,
+  init() {
     return new Promise((res) => {
       if (!("speechSynthesis" in window)) return res();
-      const load = () => { this.voices = speechSynthesis.getVoices(); };
+      const load = () => { this.voices = speechSynthesis.getVoices() || []; };
       load(); speechSynthesis.onvoiceschanged = load;
       if (this.voices.length) return res();
       const t = setTimeout(res, 1500);
-      speechSynthesis.addEventListener("voiceschanged", () => { clearTimeout(t); res(); }, { once: true });
+      speechSynthesis.addEventListener && speechSynthesis.addEventListener("voiceschanged", () => { clearTimeout(t); res(); }, { once: true });
     });
   },
   find(prefix) {
@@ -396,143 +673,188 @@ const Speech = {
   },
   pick(t) {
     if (typeof t === "string") t = { en: t, ur: t };
-    if (S.lang === "ur") {
+    if (P.lang === "ur") {
       const ur = this.find("ur"); if (ur && t.ur) return { text: t.ur, voice: ur };
       const hi = this.find("hi"); if (hi && t.hi) return { text: t.hi, voice: hi };
-      if (!this.warned) { this.warned = true; log("sys", "No Urdu or Hindi voice on this device, so IRIS speaks English. Install an Urdu/Hindi voice in the phone's text-to-speech settings."); }
+      if (!this.warned) { this.warned = true; UI.log("sys", "No Urdu or Hindi voice on this device, so IRIS speaks English. Install one in the phone's text-to-speech settings."); }
       return { text: t.en || "", voice: this.find("en") };
     }
     return { text: t.en || "", voice: this.find("en") };
   },
-  pending: 0, live: new Set(),
-  // Cut off whatever is speaking NOW. Finishes those sentences immediately instead of waiting for the
-  // browser to report it (some phones never report a cancelled sentence, which used to leave the mic off).
-  interruptAll() { this.gen++; try { speechSynthesis.cancel(); } catch (e) {} this.chain = Promise.resolve(); this.speaking = false; for (const f of [...this.live]) f(false); },
-  // opts.keepMic: true for short guidance tips, so the user can still say "take it" / "stop" while aiming.
-  // Everything else switches the microphone OFF while IRIS talks, so it never hears itself (main cause of glitches on phones).
-  say(t, opts = {}) {
-    this.pending++;
-    if (opts.interrupt !== false) this.interruptAll();
-    const g = this.gen;
-    const p = this.chain.then(() => (g === this.gen ? this._run(t, g, opts) : false));
-    this.chain = p.catch(() => {});
-    p.finally(() => { this.pending = Math.max(0, this.pending - 1); if (this.pending === 0 && !this.speaking) Ears.resume(); });
-    return p;
-  },
-  _run(t, g, opts = {}) {
-    return new Promise((resolve) => {
-      if (!("speechSynthesis" in window)) return resolve(true);
-      const { text, voice } = this.pick(t);
-      if (!text) return resolve(true);
-      if (!opts.keepMic) Ears.pause();
-      this.lastText = (this.lastText.slice(-500) + " " + text);
-      this.speaking = true; UI.speaking(true);
-      const chunks = splitChunks(text); let i = 0, ended = false, to = null;
-      const finish = (ok) => {
-        if (ended) return; ended = true; clearTimeout(to); this.live.delete(finish);
-        if (ok) { this.speaking = false; this.lastEnd = Date.now(); UI.speaking(false); }
-        else this.lastEnd = Date.now();
-        resolve(ok);
-      };
-      this.live.add(finish);
-      const next = () => {
-        if (ended) return;
-        if (g !== this.gen) return finish(false);                  // interrupted by newer speech
-        if (i >= chunks.length) return finish(true);
-        const u = new SpeechSynthesisUtterance(chunks[i++]);
-        if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = S.lang === "ur" ? "ur-PK" : "en-US";
-        u.rate = S.rate;
-        let done = false;
-        const fin = () => { if (done) return; done = true; clearTimeout(to); next(); };
-        to = setTimeout(fin, 2500 + (u.text.length * 85) / S.rate);   // safety: some browsers never fire onend
-        u.onend = fin; u.onerror = fin;
-        speechSynthesis.speak(u);
-      };
-      next();
+  // say(text)            → cuts off anything speaking and says this
+  // say(text,{queue:1})  → waits its turn
+  say(t, o = {}) {
+    return new Promise((res) => {
+      if (!("speechSynthesis" in window)) return res(true);
+      if (!o.queue) this.cancelAll();
+      this.q.push({ t, o, res, g: this.gen });
+      this.setBusy(true); this.pump();
     });
   },
-  stop() { this.interruptAll(); this.lastEnd = Date.now(); UI.speaking(false); Ears.resume(); }
+  cancelAll() {
+    if (!this.cur && !this.q.length) { try { if (speechSynthesis.speaking) { speechSynthesis.cancel(); this.lastCancel = now(); } } catch (e) {} return; }
+    this.gen++;
+    try { speechSynthesis.cancel(); } catch (e) {}
+    this.lastCancel = now();
+    const all = (this.cur ? [this.cur] : []).concat(this.q);
+    this.cur = null; this.q = [];
+    all.forEach((i) => { clearTimeout(i.to1); clearTimeout(i.to2); i.res(false); });
+    this.setBusy(false);
+  },
+  setBusy(b) {
+    if (this.busy === b) return;
+    this.busy = b;
+    if (b && !P.duplex && Mic.rec) Mic.kill("IRIS speaking");          // switch the mic off at once, not 40 ms later
+    if (!b) { this.lastEnd = now(); if (S.state === "ready") Mic.cueNext = true; }
+    UI.render(); Mic.sync();
+  },
+  pump() {
+    if (this.cur) return;
+    if (!this.q.length) return this.setBusy(false);
+    const item = this.q.shift(); this.cur = item;
+    const { text, voice } = this.pick(item.t);
+    if (!text) return this.finish(item, true);
+    item.chunks = splitChunks(text); item.i = 0; item.voice = voice;
+    this.lastText = (this.lastText + " " + text).slice(-600);
+    Dbg.add("TTS", "say: " + text.slice(0, 80) + (text.length > 80 ? "…" : ""));
+    const wait = Math.max(0, 150 - (now() - this.lastCancel));
+    setTimeout(() => this.chunk(item, false), wait);
+  },
+  chunk(item, retry) {
+    if (item !== this.cur || item.g !== this.gen) return;
+    if (item.i >= item.chunks.length) return this.finish(item, true);
+    const txt = item.chunks[item.i];
+    const u = new SpeechSynthesisUtterance(txt);
+    if (item.voice) { u.voice = item.voice; u.lang = item.voice.lang; } else u.lang = P.lang === "ur" ? "ur-PK" : "en-US";
+    u.rate = P.rate;
+    let started = false, ended = false;
+    const end = (why) => {
+      if (ended) return; ended = true; clearTimeout(item.to1); clearTimeout(item.to2);
+      if (why !== "end") Dbg.add("TTS", "chunk ended by " + why);
+      if (item !== this.cur || item.g !== this.gen) return;
+      item.i++; this.chunk(item, false);
+    };
+    u.onstart = () => { started = true; if (item.i === 0) Dbg.add("TTS", "started"); };
+    u.onend = () => end("end");
+    u.onerror = (e) => end("error " + (e && e.error));
+    item.to1 = setTimeout(() => {                                   // speech never started?
+      if (started || ended) return;
+      if (!retry) {
+        ended = true; Dbg.add("TTS", "did not start — retrying once");
+        try { speechSynthesis.cancel(); } catch (e) {}
+        this.lastCancel = now();
+        setTimeout(() => this.chunk(item, true), 160);
+      } else end("no-start-twice");
+    }, 1800);
+    item.to2 = setTimeout(() => end("timeout"), 3500 + (txt.length * 95) / P.rate);
+    try { speechSynthesis.speak(u); } catch (e) { end("throw"); }
+  },
+  finish(item, ok) {
+    if (item !== this.cur) return;
+    this.cur = null; clearTimeout(item.to1); clearTimeout(item.to2);
+    item.res(ok);
+    if (this.q.length) this.pump(); else this.setBusy(false);
+  }
 };
-// Long text is cut into sentences (Chrome stops speaking after ~15 seconds of one utterance)
 function splitChunks(text) {
-  const parts = text.split(/(?<=[.!?۔؟])\s+/); const out = []; let cur = "";
+  const parts = text.split(/(?<=[.!?۔؟।])\s+/); const out = []; let cur = "";
   for (const p of parts) { if ((cur + " " + p).length > 180 && cur) { out.push(cur); cur = p; } else cur = cur ? cur + " " + p : p; }
   if (cur) out.push(cur); return out;
 }
-function display(t) { if (typeof t === "string") return t; return S.lang === "ur" ? (t.ur || t.en || "") : (t.en || t.ur || ""); }
-function tell(t, opts = {}) { if (opts.log !== false) log("iris", display(t)); return Speech.say(t, opts); }
+function display(t) { if (typeof t === "string") return t; return P.lang === "ur" ? (t.ur || t.en || "") : (t.en || t.ur || ""); }
+// Speak + write it in the conversation
+function tell(t, o) { UI.log("iris", display(t)); return Voice.say(t, o); }
 
-/* ===================== SOUNDS + VIBRATION ===================== */
-const Ear = {
-  ctx: null,
-  init() { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); this.ctx.resume(); } catch (e) {} },
-  tone(f, d = 0.1, type = "sine", v = 0.12, at = 0) {
-    const c = this.ctx; if (!c) return;
-    const t = c.currentTime + at, o = c.createOscillator(), g = c.createGain();
-    o.type = type; o.frequency.setValueAtTime(f, t);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-    o.connect(g).connect(c.destination); o.start(t); o.stop(t + d + 0.03);
+/* ===================== 7. MIC — speech in, with a watchdog =====================
+   The mic runs only when the state expects listening AND IRIS is not talking.
+   A fresh recognizer is created every time; old ones are fully detached, so a recognizer
+   that dies silently (common on Android while audio plays) can never block a restart.     */
+const Mic = {
+  rec: null, starting: false, live: false, startAt: 0, lastEvent: 0, backoff: 250, blocked: false,
+  netWarned: false, timer: null, syncT: null, cueNext: false,
+  wanted() {
+    if (!SR || this.blocked || document.hidden) return false;
+    const st = S.state;
+    if (P.duplex) return LISTEN_STATES.has(st) || st === "answering";
+    return LISTEN_STATES.has(st) && !Voice.busy;
   },
-  listen()  { this.tone(660, 0.09); this.tone(990, 0.12, "sine", 0.12, 0.1); },          // "I'm listening"
-  wake()    { this.tone(523, 0.07); this.tone(784, 0.07, "sine", 0.12, 0.08); this.tone(1046, 0.12, "sine", 0.12, 0.16); },
-  sleep()   { this.tone(784, 0.12, "sine", 0.06); this.tone(523, 0.18, "sine", 0.05, 0.13); },   // going back to waiting
-  shutter() { this.tone(1800, 0.04, "square", 0.07); this.tone(900, 0.07, "square", 0.06, 0.05); },
-  ok()      { [523, 659, 784].forEach((f, i) => this.tone(f, 0.14, "sine", 0.12, i * 0.11)); },
-  err()     { this.tone(330, 0.18, "triangle", 0.12); this.tone(220, 0.26, "triangle", 0.12, 0.2); },
-  tick(s)   { this.tone(420 + s * 900, 0.05, "sine", 0.1); },                              // aiming beep: higher = better
-  think()   { this.tone(520, 0.06, "sine", 0.05); this.tone(390, 0.06, "sine", 0.05, 0.08); }
-};
-const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
-
-/* ===================== VOICE INPUT (always listening) ===================== */
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-const Ears = {
-  rec: null, want: false, running: false, paused: false, fails: 0, warnedNet: false,
-  start() { this.want = true; this._go(); },
-  relang() { try { this.rec && this.rec.abort(); } catch (e) {} },      // onend restarts it in the new language
-  pause() { if (this.paused) return; this.paused = true; UI.mic(false); try { this.rec && this.rec.abort(); } catch (e) {} },
-  resume() { if (!this.paused) return; this.paused = false; setTimeout(() => this._go(), 250); },
-  _go() {
-    if (!SR || this.running || !this.want || this.paused) return;
-    const r = new SR(); this.rec = r;
-    r.lang = S.lang === "ur" ? "ur-PK" : "en-US";
+  sync() { clearTimeout(this.syncT); this.syncT = setTimeout(() => this._sync(), 40); },
+  _sync() {
+    if (this.wanted()) { if (!this.rec) this.start(); }
+    else if (this.rec) this.kill("not needed");
+    UI.mic();
+  },
+  start() {
+    let r;
+    try { r = new SR(); } catch (e) { Dbg.add("MIC", "cannot create recognizer: " + e.message); return; }
+    this.rec = r; this.starting = true; this.live = false; this.startAt = now();
+    r.lang = P.lang === "ur" ? "ur-PK" : "en-US";
     r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
-    r.onstart = () => { this.running = true; UI.mic(true); };
+    r.onstart = () => {
+      if (r !== this.rec) return;
+      this.starting = false; this.live = true; this.lastEvent = now(); this.backoff = 250;
+      Dbg.add("MIC", "live (" + r.lang + ")"); UI.mic(); UI.render();
+      if (this.cueNext && (S.state === "ready" || S.state === "waiting")) { this.cueNext = false; if (S.state === "ready") Sound.listen(); }
+    };
     r.onresult = (e) => {
-      if (this.paused) return;
+      if (r !== this.rec) return;
+      if (Voice.busy && !P.duplex) return;                             // never act on sound heard while IRIS talks
+      this.lastEvent = now();
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const res = e.results[i];
-        if (res.isFinal) { this.fails = 0; onHeard(res[0].transcript); } else interim += res[0].transcript;
+        if (res.isFinal) onHeard(res[0].transcript); else interim += res[0].transcript;
       }
       UI.heard(interim);
-      if (interim) Conv.extend();                    // the user is still talking: keep the window open
+      if (interim) Conv.extend();
     };
     r.onerror = (e) => {
-      if (e.error === "not-allowed" || e.error === "service-not-allowed") { this.want = false; UI.mic(false, true); tell(T.micBlocked); }
-      else if (e.error === "network") { this.fails++; if (!this.warnedNet) { this.warnedNet = true; tell(T.voiceNet, { interrupt: false }); } }
-      else if (e.error !== "no-speech" && e.error !== "aborted") this.fails++;
+      if (r !== this.rec) return;
+      this.lastEvent = now();
+      Dbg.add("MIC", "error: " + e.error);
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        this.blocked = true; this.kill("blocked"); UI.mic(); fail("mic");
+      } else if (e.error === "network") {
+        this.backoff = 1500;
+        if (!this.netWarned) { this.netWarned = true; tell(T.err.voiceNet, { queue: true }); }
+      } else if (e.error === "audio-capture") this.backoff = 1000;
     };
-    r.onend = () => { this.running = false; UI.mic(false); UI.heard(""); if (this.want && !this.paused) setTimeout(() => this._go(), Math.min(5000, 250 + this.fails * 800)); };
-    try { r.start(); } catch (e) { this.running = false; setTimeout(() => this._go(), 1000); }
+    r.onend = () => {
+      if (r !== this.rec) return;
+      this.rec = null; this.live = false; this.starting = false;
+      Dbg.add("MIC", "ended"); UI.mic(); UI.render();
+      if (this.wanted()) this.later(this.backoff);
+    };
+    try { r.start(); Dbg.add("MIC", "start requested"); }
+    catch (e) { Dbg.add("MIC", "start threw: " + e.message); this.rec = null; this.starting = false; this.later(1000); }
+  },
+  later(ms) { clearTimeout(this.timer); this.timer = setTimeout(() => this._sync(), Math.min(ms, 1500)); },
+  kill(why) {
+    const r = this.rec; this.rec = null; this.live = false; this.starting = false;
+    if (r) { r.onstart = r.onresult = r.onerror = r.onend = null; try { r.abort(); } catch (e) {} Dbg.add("MIC", "stopped: " + why); }
+    UI.mic();
+  },
+  relang() { if (this.rec) { this.kill("language changed"); this.later(150); } },
+  watchdog() {
+    const want = this.wanted(), t = now();
+    if (!want) { if (this.rec) this.kill("watchdog: not needed"); return; }
+    if (!this.rec) { this._sync(); return; }
+    if (this.starting && t - this.startAt > 4000) { this.kill("watchdog: never started"); this.later(100); return; }
+    if (this.live && t - this.lastEvent > 12000) { this.kill("watchdog: no sound events for 12 s, recycling"); this.later(100); }
   }
 };
+setInterval(() => { Mic.watchdog(); stateWatchdog(); }, 2000);
 
+// Echo filter — only needed when "voice interrupt" (full-duplex) is on
 function norm(s) { return (s || "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim(); }
-// Ignore the microphone hearing IRIS's own voice from the speaker
-// Short commands always pass, so the user can repeat a command IRIS just suggested.
 function isEcho(text) {
-  if (!(Speech.speaking || Date.now() - Speech.lastEnd < 700)) return false;
-  const n = norm(text), words = n.split(" ").filter(Boolean);
-  if (words.length <= 3) return false;
-  const spoken = " " + norm(Speech.lastText) + " ";
-  if (spoken.includes(" " + n + " ")) return true;                       // word-for-word piece of IRIS's sentence
-  return words.length >= 6 && words.filter((w) => spoken.includes(" " + w + " ")).length / words.length >= 0.8;
+  if (!(Voice.busy || now() - Voice.lastEnd < 1500)) return false;
+  const n = norm(text), words = n.split(" ").filter(Boolean), spoken = " " + norm(Voice.lastText) + " ";
+  if (spoken.includes(" " + n + " ")) return true;
+  return words.length >= 3 && words.filter((w) => spoken.includes(" " + w + " ")).length / words.length >= 0.6;
 }
-/* ---------- Wake words + conversation window ----------
-   WAITING: IRIS only reacts to "Hey IRIS", "IRIS", "Listen", "Hello" (سنو، ہیلو، آئرس) or a tap.
-   LISTENING: after a wake word, after an answer, or after a tap, IRIS takes any command for a few seconds,
-   then goes back to WAITING. During aiming and thinking it always listens (for "take it", "stop", questions). */
+
+/* ===================== 8. COMMANDS ===================== */
 const WAKE_RE = /\b(?:(?:hey|hi|hello|ok|okay)\s+)?(?:iris|irish|ires|eyeris|eye ris)\b|\b(?:listen|hello|hallo|helo|suno|sunno)\b/gi;
 const WAKE_UR = ["ہیلو آئرس", "ہائے آئرس", "آئرس", "ائرس", "سنو", "ہیلو"];
 function stripWake(text) {
@@ -540,130 +862,156 @@ function stripWake(text) {
   for (const w of WAKE_UR) if (out.includes(w)) { found = true; out = out.split(w).join(" "); }
   return found ? out.replace(/^[\s,.!?،]+|[\s,.!?،]+$/g, "").trim() : null;
 }
-const Conv = {
-  mode: "sleep", timer: null, saidSleep: false, WINDOW: 8000,
-  active(ms) {
-    this.mode = "active"; clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.timeout(), ms || this.WINDOW); UI.state();
-  },
-  extend() { if (this.mode === "active") this.active(); },
-  timeout() {
-    if (Speech.speaking || S.state !== "idle") return this.active(3000);   // busy: check again soon
-    this.sleep();
-  },
-  sleep() {
-    clearTimeout(this.timer); this.mode = "sleep"; UI.state(); Ear.sleep();
-    if (!this.saidSleep) { this.saidSleep = true; tell(T.sleeping, { interrupt: false }); }
-  }
-};
-// "Yes? I'm listening." – used for wake words and taps
-function wake() {
-  Speech.stop(); Ear.wake(); buzz(30);
-  Conv.active();
-  tell(T.yes).then(() => Conv.active());
-}
-function onHeard(raw) {
-  const text = (raw || "").trim(); if (!text || isEcho(text)) return;
-  UI.heard("");
-  const rest = stripWake(text);
-  if (S.state === "idle" && Conv.mode === "sleep") {
-    if (rest === null) { UI.heard("(waiting for “Hey IRIS”) " + text); return; }   // not for IRIS
-    log("user", text);
-    if (rest.length < 2) return wake();
-    Conv.active(); return handleCommand(rest);
-  }
-  log("user", text);
-  if (rest !== null && rest.length < 2) return wake();
-  Conv.active();
-  handleCommand(rest !== null ? rest : text);
-}
-
-/* ===================== COMMANDS ===================== */
-function handleCommand(raw) {
-  const n = norm(raw), t = " " + n + " ", words = n.split(" ").length;
+// Understand a sentence → { cmd, mode, q, wake }
+function parse(raw) {
+  const stripped = stripWake(raw), wake = stripped !== null, body = wake ? stripped : raw.trim();
+  const n = norm(body), t = " " + n + " ", words = n ? n.split(" ").length : 0;
   const C = (re, ur = []) => re.test(t) || ur.some((w) => t.includes(w));
-  const q = words > 3 ? raw.trim() : "";
+  const base = { wake, body, words };
+  if (!n) return { ...base, cmd: "wakeOnly" };
+  if (C(/\b(bye|goodbye|good bye|that s all|thats all|go to sleep|no thanks|no thank you|thank you|thanks|shukriya|allah hafiz|khuda hafiz)\b/, ["شکریہ", "بس اتنا", "اللہ حافظ", "خدا حافظ"])) return { ...base, cmd: "sleep" };
+  if (C(/\b(stop|cancel|quiet|shut up|enough|ruko|ruk jao|bas|chup|khamosh)\b/, ["رکو", "رک جاؤ", "بس کرو", "خاموش", "چپ", "اسٹاپ", "سٹاپ"])) return { ...base, cmd: "stop" };
+  if (C(/\b(tutorial|guide me|how do you work|how does this work)\b/, ["ٹیوٹوریل", "طریقہ"])) return { ...base, cmd: "tutorial" };
+  if (C(/\b(help|what can you do|commands|madad)\b/, ["مدد", "ہیلپ"])) return { ...base, cmd: "help" };
+  if (C(/\b(try again|retry|scan again|dobara koshish)\b/, ["دوبارہ کوشش", "پھر کوشش"])) return { ...base, cmd: "retry" };
+  if (C(/\b(repeat|again|say that again|come again|dobara|dubara|phir se|dohrao)\b/, ["دوبارہ", "پھر سے", "دہرا", "ریپیٹ"])) return { ...base, cmd: "repeat" };
+  if (C(/\b(details?|more info|tell me more|tafseel)\b/, ["تفصیل", "مزید"])) return { ...base, cmd: "details" };
+  if (C(/\b(urdu)\b/, ["اردو"])) return { ...base, cmd: "lang", lang: "ur" };
+  if (C(/\b(english|angrezi)\b/, ["انگریزی", "انگلش"])) return { ...base, cmd: "lang", lang: "en" };
+  if (C(/\b(slower|slow down|ahista|aahista)\b/, ["آہستہ"])) return { ...base, cmd: "rate", d: -0.15 };
+  if (C(/\b(faster|speed up|tez)\b/, ["تیز"])) return { ...base, cmd: "rate", d: 0.15 };
+  if (C(/\b(take it|take it now|take (the |a )?(photo|picture)|capture|click|snap|tasveer|tasweer)\b/, ["تصویر لو", "تصویر لیں", "کھینچ"])) return { ...base, cmd: "capture" };
+  const q = words > 3 ? body : "";
+  if (C(/\b(medicine|medication|tablets?|pills?|syrup|dawai|dawa)\b/, ["دوا", "گولی", "شربت", "میڈیسن"])) return { ...base, cmd: "scan", mode: "medicine", q };
+  if (C(/\b(money|cash|currency|rupees?|paise|paisay|paisa|raqam)\b/, ["پیسے", "پیسہ", "نوٹ", "روپے", "رقم"])) return { ...base, cmd: "scan", mode: "money", q };
+  if (C(/\b(read|reading|text|document|letter|paper|parho|parh)\b/, ["پڑھ", "کاغذ", "لکھا"])) return { ...base, cmd: "scan", mode: "read", q };
+  if (C(/\b(describe|surroundings|around me|in front of me|where am i|scene|room|aas paas|saamne|samne|ird gird)\b/, ["سامنے", "ارد گرد", "آس پاس", "کہاں ہوں"])) return { ...base, cmd: "scan", mode: "describe", q };
+  if (C(/\b(what is this|what s this|whats this|identify|scan|look|see|kya hai|yeh kya)\b/, ["یہ کیا", "کیا ہے", "دیکھو", "پہچان"])) return { ...base, cmd: "scan", mode: "identify", q };
+  return { ...base, cmd: "question", q: body };
+}
 
-  if (C(/\b(bye|goodbye|good bye|that s all|thats all|go to sleep|sleep|no thanks|no thank you|thank you|thanks|shukriya|allah hafiz|khuda hafiz)\b/, ["شکریہ", "بس اتنا", "اللہ حافظ", "خدا حافظ"])) return cmdSleep();
-  if (C(/\b(stop|cancel|quiet|shut up|enough|ruko|ruk jao|bas|chup|khamosh)\b/, ["رکو", "رک جاؤ", "بس کرو", "خاموش", "چپ", "اسٹاپ", "سٹاپ"])) return cmdStop();
-  if (C(/\b(help|what can you do|commands|madad)\b/, ["مدد", "ہیلپ"])) return cmdHelp();
-  if (C(/\b(try again|retry|scan again|dobara koshish)\b/, ["دوبارہ کوشش", "پھر کوشش"])) return startScan(S.mode, "");
-  if (C(/\b(repeat|again|say that again|come again|dobara|dubara|phir se|dohrao)\b/, ["دوبارہ", "پھر سے", "دہرا", "ریپیٹ"])) return cmdRepeat();
-  if (C(/\b(details?|more info|tell me more|tafseel)\b/, ["تفصیل", "مزید"])) return cmdDetails();
-  if (C(/\b(urdu)\b/, ["اردو"])) return setLang("ur");
-  if (C(/\b(english|angrezi)\b/, ["انگریزی", "انگلش"])) return setLang("en");
-  if (C(/\b(slower|slow down|ahista|aahista)\b/, ["آہستہ"])) return setRate(-0.15);
-  if (C(/\b(faster|speed up|tez)\b/, ["تیز"])) return setRate(0.15);
-  if (C(/\b(take it|take it now|take (the |a )?(photo|picture)|capture|click|snap|tasveer|tasweer)\b/, ["تصویر لو", "تصویر لیں", "کھینچ"])) {
-    if (S.state === "aiming") return captureNow();
-    return startScan(S.mode, "");
+function onHeard(raw) {
+  const text = (raw || "").trim(); if (!text) return;
+  if (P.duplex && isEcho(text)) { Dbg.add("HEARD", "ignored (echo): " + text); return; }
+  UI.heard("");
+  handle(text, "voice");
+}
+function handle(raw, source) {
+  const it = parse(raw);
+  // Waiting: only a wake word gets through (typed text from a helper always gets through)
+  if (S.state === "waiting") {
+    if (!it.wake && source === "voice") { Dbg.add("HEARD", "ignored (waiting for wake word): " + raw); UI.heard("Waiting for “Hey IRIS” — heard: " + raw); return; }
+    Dbg.add("HEARD", raw); UI.log("user", raw);
+    if (it.cmd === "wakeOnly") return wake();
+    go("ready", "wake word");
+  } else {
+    Dbg.add("HEARD", raw); UI.log("user", raw);
+    if (it.cmd === "wakeOnly") return (S.state === "ready" || S.state === "answering") ? wake() : undefined;
   }
-  if (C(/\b(medicine|medication|tablets?|pills?|syrup|dawai|dawa)\b/, ["دوا", "گولی", "شربت", "میڈیسن"])) return startScan("medicine", q);
-  if (C(/\b(money|cash|currency|rupees?|paise|paisay|paisa|raqam)\b/, ["پیسے", "پیسہ", "نوٹ", "روپے", "رقم"])) return startScan("money", q);
-  if (C(/\b(read|reading|text|document|letter|paper|parho|parh)\b/, ["پڑھ", "کاغذ", "لکھا"])) return startScan("read", q);
-  if (C(/\b(describe|surroundings|around me|in front of me|where am i|scene|room|aas paas|saamne|samne|ird gird)\b/, ["سامنے", "ارد گرد", "آس پاس", "کہاں ہوں"])) return startScan("describe", q);
-  if (C(/\b(what is this|what s this|whats this|identify|scan|look|see|kya hai|yeh kya)\b/, ["یہ کیا", "کیا ہے", "دیکھو", "پہچان"])) return startScan("identify", q);
-
-  // Anything else is a question
-  if (S.state === "thinking") { S.queued = raw.trim(); return tell(T.next, { interrupt: false, keepMic: true }); }
-  if (S.state === "aiming") { S.pendingQuestion = raw.trim(); return tell(T.noted, { interrupt: false, keepMic: true }); }
-  if (S.image && Date.now() - S.imageTime < 120000) return followUp(raw.trim());
-  return startScan(S.mode === "describe" ? "describe" : "identify", raw.trim());
+  Conv.extend();
+  if (it.cmd === "stop") return stopAll();
+  if (it.cmd === "sleep") return sleepNow();
+  if (it.cmd === "lang") return setLang(it.lang);
+  if (it.cmd === "rate") return setRate(it.d);
+  switch (S.state) {
+    case "ready": return readyCmd(it);
+    case "answering": Voice.cancelAll(); go("ready", "spoke during answer"); return readyCmd(it);
+    case "aiming": return aimingCmd(it);
+    case "thinking": return thinkingCmd(it);
+    default: Dbg.add("HEARD", "ignored in state " + S.state);
+  }
 }
-
-function cmdStop() {
-  Speech.stop(); Aim.stop();
-  if (S.abort) { try { S.abort.abort(); } catch (e) {} }
-  S.pendingQuestion = ""; S.queued = ""; setState("idle");
-  tell(T.stopped).then(() => { if (S.state === "idle") { Ear.listen(); Conv.active(); } });
+function readyCmd(it) {
+  switch (it.cmd) {
+    case "help": return tell(T.help);
+    case "tutorial": return tell(T.tutorial);
+    case "repeat": return repeatLast();
+    case "details": return speakDetails();
+    case "retry": case "capture": return startScan(S.mode, "");
+    case "scan": return startScan(it.mode, it.q);
+    case "question":
+      if (S.image && now() - S.imageTime < 180000) return followUp(it.q);
+      return startScan(S.mode === "describe" ? "describe" : "identify", it.q);
+  }
 }
-function cmdSleep() {
-  Speech.stop(); Aim.stop();
-  if (S.abort) { try { S.abort.abort(); } catch (e) {} }
-  S.pendingQuestion = ""; S.queued = ""; setState("idle");
-  Conv.saidSleep = true;
-  tell(T.bye).then(() => { if (S.state === "idle") Conv.sleep(); });
+function aimingCmd(it) {
+  switch (it.cmd) {
+    case "capture": return capture("voice");
+    case "scan": if (it.mode !== S.mode) return startScan(it.mode, it.q); if (it.q) S.pendingQuestion = it.q; return;
+    case "repeat": return Voice.say(S.lastTipObj || T.intro[S.mode]);
+    case "help": case "tutorial": return Voice.say(T.aimHelp);
+    case "question": S.pendingQuestion = it.q; return Voice.say(T.noted);
+  }
 }
-function cmdHelp() { tell(T.help); }
-function cmdRepeat() { if (S.lastReply) speakReply(S.lastReply); else tell(T.nothing); }
-function cmdDetails() {
+function thinkingCmd(it) {
+  if (it.cmd === "question") { S.queued = it.q; return Voice.say(T.queued, { queue: true }); }
+  return Voice.say(T.stillThinking, { queue: true });
+}
+function stopAll() {
+  Voice.cancelAll(); Aim.stop();
+  if (S.abort) { S.abortWhy = "stop"; try { S.abort.abort(); } catch (e) {} }
+  S.pendingQuestion = ""; S.queued = "";
+  go("ready", "stop"); tell(T.stopped);
+}
+function sleepNow() {
+  Voice.cancelAll(); Aim.stop();
+  if (S.abort) { S.abortWhy = "stop"; try { S.abort.abort(); } catch (e) {} }
+  S.pendingQuestion = ""; S.queued = ""; Conv.saidOnce = true;
+  if (P.listen === "auto") go("waiting", "user said thanks"); else go("ready", "user said thanks");
+  tell(T.bye);
+}
+function wake() { Voice.cancelAll(); go("ready", "wake"); Conv.arm(); Voice.say(T.yes); }
+function repeatLast() { if (S.lastReply) return Voice.say(replySpeech(S.lastReply)); return tell(T.nothing); }
+function speakDetails() {
   const r = S.lastReply;
   if (!r || !(r.details || []).length) return tell(T.noDetails);
-  const txt = r.details.join(S.lang === "ur" ? "۔ " : ". ");
-  tell({ en: txt, ur: txt, hi: r.details_tts || "" });
+  const txt = r.details.join(P.lang === "ur" ? "۔ " : ". ");
+  return Voice.say({ en: txt, ur: txt, hi: r.details_tts || "" });
 }
-function setLang(l) {
-  S.lang = l; savePrefs(); UI.lang(); Ears.relang();
-  tell(l === "ur" ? T.langUr : T.langEn);
-}
-function setRate(d) {
-  S.rate = Math.min(1.6, Math.max(0.6, +(S.rate + d).toFixed(2))); savePrefs();
-  tell(d < 0 ? T.slower : T.faster);
-}
+function setLang(l) { P.lang = l; savePrefs(); UI.applyLang(); Mic.relang(); tell(l === "ur" ? T.langUr : T.langEn); }
+function setRate(d) { P.rate = Math.min(1.6, Math.max(0.6, +(P.rate + d).toFixed(2))); savePrefs(); tell(d < 0 ? T.slower : T.faster); }
 function setMode(m) {
   S.mode = m;
-  document.querySelectorAll(".mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
+  document.querySelectorAll(".chip").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
 }
-function setState(s) { S.state = s; UI.state(); }
+function cycleMode(dir) {
+  if (!["ready", "waiting"].includes(S.state)) return;
+  if (S.state === "waiting") go("ready", "swipe");
+  const i = (MODES.indexOf(S.mode) + dir + MODES.length) % MODES.length;
+  setMode(MODES[i]); Sound.blip(); buzz(15); Voice.say(say_mode(MODES[i]));
+}
 
-/* ===================== CAMERA ===================== */
-async function openCamera() {
+/* ===================== 9. CAMERA + AIMING ===================== */
+async function openCamera(quiet) {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false
-    });
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("camera not supported");
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false });
     S.stream = stream;
     const v = $("video"); v.srcObject = stream; await v.play().catch(() => {});
-    const st = stream.getVideoTracks()[0].getSettings ? stream.getVideoTracks()[0].getSettings() : {};
-    S.facing = st.facingMode === "environment" ? "environment" : "user";   // laptops usually report nothing = facing the user
+    const track = stream.getVideoTracks()[0];
+    S.facing = detectFacing(track);
+    track.addEventListener("ended", () => { Dbg.add("CAM", "track ended"); S.stream = null; UI.cam(false); });
+    Dbg.add("CAM", `open: "${track.label}" → ${S.facing}`);
     UI.cam(true);
     return true;
   } catch (e) {
-    log("sys", "Camera error: " + e.message); UI.cam(false); Ear.err(); await tell(T.camFail); return false;
+    Dbg.add("CAM", "error: " + e.message); UI.cam(false); if (!quiet) fail("camera"); return false;
   }
 }
+// Phone back camera → "move the phone". Laptop/front camera → "move the object".
+function detectFacing(track) {
+  if (P.camera !== "auto") return P.camera;
+  const s = track && track.getSettings ? track.getSettings() : {};
+  if (s.facingMode === "environment" || s.facingMode === "user") return s.facingMode;
+  const label = ((track && track.label) || "").toLowerCase();
+  if (/back|rear|environment|world/.test(label)) return "environment";
+  if (/front|user|face|integrated|webcam|usb|hd camera/.test(label)) return "user";
+  const mobile = navigator.userAgentData ? navigator.userAgentData.mobile : /android|iphone|ipad|mobile/i.test(navigator.userAgent);
+  return mobile ? "environment" : "user";
+}
+function cameraOK() { return S.stream && S.stream.getVideoTracks()[0] && S.stream.getVideoTracks()[0].readyState === "live"; }
 
-/* ===================== LIVE FRAME CHECK (light, shaking, where the object is) ===================== */
+// --- Live frame check: light, shaking, and where the object is (edges) ---
 const MW = 128, MH = 96;
 const mCanvas = document.createElement("canvas"); mCanvas.width = MW; mCanvas.height = MH;
 const mCtx = mCanvas.getContext("2d", { willReadFrequently: true });
@@ -677,20 +1025,17 @@ function measure(src) {
   let motion = -1;
   if (mPrev) { motion = 0; for (let i = 0; i < N; i++) motion += Math.abs(g[i] - mPrev[i]); motion /= N; }
   mPrev = g;
-  // edge strength per pixel
-  const mag = new Float32Array(N); let ms = 0, ms2 = 0, cnt = 0;
-  const hist = new Uint32Array(256);
+  const mag = new Float32Array(N), hist = new Uint32Array(256); let ms = 0, ms2 = 0, cnt = 0;
   for (let y = 1; y < MH - 1; y++) for (let x = 1; x < MW - 1; x++) {
     const i = y * MW + x, m = Math.abs(g[i + 1] - g[i - 1]) + Math.abs(g[i + MW] - g[i - MW]);
     mag[i] = m; ms += m; ms2 += m * m; cnt++; hist[Math.min(255, m >> 1)]++;
   }
   const mMean = ms / cnt, mStd = Math.sqrt(Math.max(0, ms2 / cnt - mMean * mMean));
-  let acc = 0, p98 = 0; for (let k = 0; k < 256; k++) { acc += hist[k]; if (acc >= cnt * 0.995) { p98 = k * 2; break; } }
-  const blur = p98 < 22;                                   // even the strongest edges are weak = blurry or too close
-  // where are the strong edges? (the object, if the background is plain)
-  const T2 = Math.max(18, mMean + mStd), hx = new Uint32Array(MW), hy = new Uint32Array(MH); let ec = 0;
-  for (let y = 1; y < MH - 1; y++) for (let x = 1; x < MW - 1; x++) if (mag[y * MW + x] > T2) { hx[x]++; hy[y]++; ec++; }
-  const edgeFrac = ec / cnt, found = edgeFrac > 0.006 && p98 >= 16;
+  let acc = 0, pTop = 0; for (let k = 0; k < 256; k++) { acc += hist[k]; if (acc >= cnt * 0.995) { pTop = k * 2; break; } }
+  const blur = pTop < 22;
+  const th = Math.max(18, mMean + mStd), hx = new Uint32Array(MW), hy = new Uint32Array(MH); let ec = 0;
+  for (let y = 1; y < MH - 1; y++) for (let x = 1; x < MW - 1; x++) if (mag[y * MW + x] > th) { hx[x]++; hy[y]++; ec++; }
+  const edgeFrac = ec / cnt, found = edgeFrac > 0.006 && pTop >= 16;
   const pct = (h, p) => { const target = ec * p; let a = 0; for (let k = 0; k < h.length; k++) { a += h[k]; if (a >= target) return k; } return h.length - 1; };
   let box = { x0: 0, x1: 1, y0: 0, y1: 1 };
   if (found) box = { x0: pct(hx, 0.06) / MW, x1: (pct(hx, 0.94) + 1) / MW, y0: pct(hy, 0.06) / MH, y1: (pct(hy, 0.94) + 1) / MH };
@@ -699,24 +1044,22 @@ function measure(src) {
   const touches = (box.x0 < e) + (box.x1 > 1 - e) + (box.y0 < e) + (box.y1 > 1 - e);
   return { bright, motion, blur, found, edgeFrac, box, cx, cy, cover, touches };
 }
-// Decide what the user should do next. Keys describe where the object is in the IMAGE.
+// What should the user do? Keys describe where the object is in the IMAGE.
 function judge(m, mode) {
   if (m.bright < 45) return { key: "dark", ok: false, score: 0.05 };
   if (m.motion > 10) return { key: "shaky", ok: false, score: 0.3 };
-  if (mode === "describe") return { key: "good", ok: m.motion >= 0, score: 1 };
+  if (mode === "describe") return { key: "good", ok: true, score: 1 };
   if (!m.found) return { key: "nothing", ok: false, score: 0.1 };
   if (m.touches >= 3 && m.blur) return { key: "farther", ok: false, score: 0.45 };
   const minCover = mode === "money" ? 0.18 : mode === "read" ? 0.25 : 0.1;
   const off = Math.max(Math.abs(m.cx), Math.abs(m.cy));
   const dirKey = Math.abs(m.cx) >= Math.abs(m.cy) ? (m.cx > 0 ? "imgRight" : "imgLeft") : (m.cy > 0 ? "imgLow" : "imgHigh");
-  if (m.cover < 0.75 && off > 0.22) return { key: dirKey, ok: false, score: Math.max(0.3, 0.9 - off * 1.5) };   // far off-centre: fix first
+  if (m.cover < 0.75 && off > 0.22) return { key: dirKey, ok: false, score: Math.max(0.3, 0.9 - off * 1.5) };
   if (m.cover < minCover) return { key: "closer", ok: false, score: Math.min(0.6, 0.3 + m.cover * 2) };
   if (m.cover < 0.75 && off > 0.16) return { key: dirKey, ok: false, score: Math.max(0.45, 0.95 - off * 1.5) };
-  return { key: "good", ok: m.motion >= 0, score: 1 };
+  return { key: "good", ok: true, score: 1 };
 }
-// Turn "where it is in the image" into a spoken instruction.
-// Phone back camera: move the PHONE toward the object.
-// Laptop camera facing you: the picture is not mirrored, so the image's right is YOUR left.
+// Phone back camera: move the PHONE toward the object.  Front camera: the picture's right is the user's LEFT.
 function tipFor(key) {
   const env = S.facing === "environment";
   const map = {
@@ -727,49 +1070,67 @@ function tipFor(key) {
   };
   return T.tips[map[key]] || T.tips.good;
 }
-
+// One instruction at a time; repeat it only if nothing changes for 6 s
 const Aim = {
-  timer: null, goodSince: 0, lastKey: "", lastTipAt: 0, startAt: 0, lastBeep: 0, saidGood: false,
+  timer: null, okSince: 0, locked: false, candKey: "", candSince: 0, saidKey: "", saidAt: 0, lastBeep: 0, startAt: 0,
   start() {
     this.stop(); mPrev = null;
-    Object.assign(this, { goodSince: 0, lastKey: "", lastTipAt: Date.now(), startAt: Date.now(), lastBeep: 0, saidGood: false });
+    Object.assign(this, { okSince: 0, locked: false, candKey: "", candSince: 0, saidKey: "", saidAt: now(), lastBeep: 0, startAt: now() });
     this.timer = setInterval(() => this.step(), 200);
+    Dbg.add("AIM", "start · " + S.mode + " · camera " + S.facing);
   },
-  stop() { clearInterval(this.timer); this.timer = null; Overlay.clear(); UI.tip(""); },
+  stop() { if (this.timer) { clearInterval(this.timer); this.timer = null; } Overlay.clear(); UI.aim(null); },
   step() {
     if (S.state !== "aiming") return this.stop();
     const v = $("video"); if (!v.videoWidth) return;
-    const m = measure(v);
-    if (m.motion < 0) return;                            // first frame: nothing to compare yet
-    const j = judge(m, S.mode), now = Date.now();
-    Overlay.draw(m, j); UI.meters(m, j);
-    if (j.ok) { if (!this.goodSince) this.goodSince = now; } else { this.goodSince = 0; this.saidGood = false; }
-    if (!Speech.speaking && now - this.lastBeep > 900 - j.score * 650) { Ear.tick(j.score); this.lastBeep = now; if (j.ok) buzz(15); }
-    if (!Speech.speaking) {
-      if (!j.ok && ((j.key !== this.lastKey && now - this.lastTipAt > 1800) || now - this.lastTipAt > 4500)) {
-        const tip = tipFor(j.key); this.lastKey = j.key; this.lastTipAt = now; UI.tip(display(tip)); tell(tip, { log: false, keepMic: true });
-      } else if (j.ok && !this.saidGood) {
-        this.saidGood = true; this.lastKey = "good"; UI.tip(display(T.tips.good)); tell(T.tips.good, { log: false, keepMic: true });
+    const m = measure(v); if (m.motion < 0) return;
+    const j = judge(m, S.mode), t = now();
+    Overlay.draw(m, j); UI.aim(m, j);
+    if (t - this.startAt > 25000) { this.stop(); capture("timeout"); return; }
+    if (Voice.busy) { this.okSince = 0; this.locked = false; return; }        // let the sentence finish first
+    if (j.ok) {
+      if (!this.okSince) this.okSince = t;
+      if (!this.locked && t - this.okSince > 600) {
+        this.locked = true; Sound.locked(); buzz(30); Dbg.add("AIM", "locked on");
+        S.lastTip = display(T.tips.good); S.lastTipObj = T.tips.good; UI.render();
       }
+      if (this.locked && t - this.okSince > 1300) { this.stop(); capture("auto"); }
+      return;
     }
-    if (j.ok && this.saidGood && !Speech.speaking && now - this.goodSince > 1200) { this.stop(); capture("good"); return; }
-    if (now - this.startAt > 25000) { this.stop(); capture("timeout"); }
+    this.okSince = 0; this.locked = false;
+    if (t - this.lastBeep > 900 - j.score * 650) { Sound.aim(j.score); this.lastBeep = t; }
+    if (j.key !== this.candKey) { this.candKey = j.key; this.candSince = t; }
+    const stable = t - this.candSince >= 400, changed = j.key !== this.saidKey;
+    if (stable && ((changed && t - this.saidAt > 1200) || (!changed && t - this.saidAt > 6000))) {
+      const tip = tipFor(j.key);
+      this.saidKey = j.key; this.saidAt = t; S.lastTip = display(tip); S.lastTipObj = tip;
+      Dbg.add("AIM", "tip: " + j.key); UI.render(); Voice.say(tip);
+    }
   }
 };
-
-/* ===================== SCAN → CAPTURE → ANALYZE ===================== */
-async function startScan(mode, question) {
-  if (S.state === "thinking") return tell(T.busy);
-  if (!S.stream && !(await openCamera())) return;
-  Aim.stop(); setMode(mode);
-  S.pendingQuestion = question || ""; S.history = []; S.retries = 0;
-  setState("aiming");
-  await tell(T.intro[mode]);
-  if (!S.tutorialDone && S.state === "aiming") { S.tutorialDone = true; savePrefs(); await tell(T.tutorial, { interrupt: false }); }
-  if (S.state === "aiming") Aim.start();
-}
-function captureNow() { if (S.state === "aiming") { Aim.stop(); capture("manual"); } }
-
+const Overlay = {
+  ctx() {
+    const c = $("ov"), st = $("stage"), dpr = window.devicePixelRatio || 1, W = st.clientWidth, H = st.clientHeight;
+    if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H); return { x, W, H };
+  },
+  rr(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); },
+  draw(m, j) {
+    const { x, W, H } = this.ctx(), v = $("video");
+    if (!v.videoWidth || S.mode === "describe") return;
+    const sc = Math.max(W / v.videoWidth, H / v.videoHeight), dw = v.videoWidth * sc, dh = v.videoHeight * sc, ox = (W - dw) / 2, oy = (H - dh) / 2;
+    const X = (u) => ox + u * dw, Y = (u) => oy + u * dh;
+    x.setLineDash([10, 10]); x.lineWidth = 2; x.strokeStyle = "rgba(255,255,255,.45)";
+    this.rr(x, X(0.3), Y(0.3), dw * 0.4, dh * 0.4, 18); x.stroke(); x.setLineDash([]);
+    if (!m.found) return;
+    const col = j.ok ? "#30d158" : "#ffd60a";
+    x.strokeStyle = col; x.lineWidth = 4;
+    this.rr(x, X(m.box.x0), Y(m.box.y0), (m.box.x1 - m.box.x0) * dw, (m.box.y1 - m.box.y0) * dh, 14); x.stroke();
+    x.lineWidth = 3; x.beginPath(); x.moveTo(X(0.5 + m.cx), Y(0.5 + m.cy)); x.lineTo(X(0.5), Y(0.5)); x.stroke();
+    x.fillStyle = col; x.beginPath(); x.arc(X(0.5 + m.cx), Y(0.5 + m.cy), 6, 0, Math.PI * 2); x.fill();
+  },
+  clear() { this.ctx(); }
+};
 function toImage(src, w, h) {
   const max = 1280, sc = Math.min(1, max / Math.max(w, h)), c = document.createElement("canvas");
   c.width = Math.round(w * sc); c.height = Math.round(h * sc);
@@ -777,50 +1138,8 @@ function toImage(src, w, h) {
   const url = c.toDataURL("image/jpeg", 0.85);
   return { base64: url.split(",")[1], mimeType: "image/jpeg", url };
 }
-async function capture(reason) {
-  if (S.state !== "aiming") return;
-  const v = $("video"); if (!v.videoWidth) return;
-  S.image = toImage(v, v.videoWidth, v.videoHeight); S.imageTime = Date.now();
-  Ear.shutter(); buzz([40, 30, 40]); UI.flash(); UI.snap(S.image.url);
-  log("sys", "📸 picture taken (" + reason + ")");
-  if (reason === "timeout") await tell(T.timeout);
-  const q = S.pendingQuestion; S.pendingQuestion = "";
-  const r = await ask([{ role: "user", parts: [{ inline_data: { mime_type: S.image.mimeType, data: S.image.base64 } }, { text: firstPrompt(S.mode, q) }] }], false);
-  if (!r) return;
-  if (r.retake && S.retries < 2) {                       // Gemma says the photo isn't good enough → guide again
-    S.retries++; S.pendingQuestion = q; setState("aiming");
-    await tell(T.retake); await speakReply(r, { interrupt: false });
-    if (S.state === "aiming") Aim.start();
-    return;
-  }
-  deliver(r);
-}
-async function followUp(q) {
-  if (S.state === "thinking") return tell(T.busy);
-  const contents = S.history.length
-    ? [...S.history, { role: "user", parts: [{ text: followPrompt(q) }] }]
-    : [{ role: "user", parts: [{ inline_data: { mime_type: S.image.mimeType, data: S.image.base64 } }, { text: firstPrompt(S.mode, q) }] }];
-  const r = await ask(contents, true);
-  if (r) deliver(r);
-}
-async function deliver(r) {
-  S.lastReply = r; setState("idle");
-  Ear.ok(); buzz(80); UI.result(r);
-  await speakReply(r);
-  if (S.queued && S.state === "idle") { const q = S.queued; S.queued = ""; return followUp(q); }   // question asked while busy
-  if (S.state !== "idle") return;
-  // Always tell the user how to continue (full sentence the first 3 times, then short)
-  await tell(S.hintCount++ < 3 ? T.anything : T.anythingShort, { interrupt: false });
-  if (S.state === "idle" && !Speech.speaking) { Ear.listen(); Conv.active(); }
-}
-function replySpeech(r) {
-  const w = (r.warnings || []).filter(Boolean);
-  if (S.lang === "ur") return { ur: [r.answer, w.length ? "خبردار: " + w.join("۔ ") : ""].filter(Boolean).join(" "), hi: r.answer_tts || "", en: r.answer_en || "" };
-  return { en: [r.answer, w.length ? "Warning: " + w.join(". ") : ""].filter(Boolean).join(" ") };
-}
-function speakReply(r, opts) { return tell(replySpeech(r), opts); }
 
-/* ===================== AI (Gemini 3.8 Flash with Gemma 4 fallback) ===================== */
+/* ===================== 10. AI (Gemini with Gemma fallback) ===================== */
 const MODE_TASK = {
   identify: "Identify the main object the user is holding or pointing the camera at: what it is, its brand or name if visible, its color, and any important text on it.",
   read: "Read the text aloud in a natural order (headings first, then the body). If it is long, read the most important part first and summarize the rest.",
@@ -829,25 +1148,25 @@ const MODE_TASK = {
   describe: "Describe the surroundings for a blind person: what is ahead, where things are (left, right, ahead, near, far), people, doors, stairs, and any obstacles or dangers first."
 };
 function langRules() {
-  return S.lang === "ur"
+  return P.lang === "ur"
     ? `Write "answer", "details" and "warnings" in simple everyday Urdu (Urdu script). Keep brand and medicine names in English letters. Also fill:
-- "answer_tts": the same spoken text (answer, then any warnings) written in Devanagari script — the same Urdu words, only the script changes, so a voice can read it aloud.
+- "answer_tts": the warnings and then the answer, written in Devanagari script — the same Urdu words, only the script changes, so a voice can read it aloud.
 - "details_tts": the details in Devanagari script.
-- "answer_en": a short English version of the answer.`
+- "answer_en": a short English version of the warnings and answer.`
     : `Write everything in simple English. Set "answer_tts", "details_tts" and "answer_en" to empty strings.`;
 }
 const SHAPE = `Reply with ONLY valid JSON (no markdown, no extra text) in exactly this shape:
 {"answer": "", "details": [], "warnings": [], "retake": false, "answer_tts": "", "details_tts": "", "answer_en": ""}
 - "answer": 1 to 3 short sentences, the most important thing first. It will be read aloud.
 - "details": extra useful facts as short items (can be empty).
-- "warnings": dangers, obstacles, expired dates or important cautions (empty if none).
+- "warnings": dangers, obstacles, expired dates or important cautions (empty if none). They are read BEFORE the answer.
 - "retake": true ONLY if the photo is too blurry, too dark, cut off, or the object is not visible enough to do the task. Then "answer" must instead be ONE short instruction on how to fix it (move the camera or object left, right, up, down, closer, farther, turn it over, or find more light).`;
 function firstPrompt(mode, q) {
   return `You are IRIS, the eyes of a blind person in Pakistan. They cannot see this photo; everything you write is read aloud to them.
 Task: ${MODE_TASK[mode]}
 ${q ? `They asked: "${q}". Answer that directly first.` : ""}
 Talk to them directly, warmly and briefly, as if you are looking for them. Never say "the image shows" or "in the photo". If you are not sure, say so. Never guess a name, date or amount you cannot read.
-Camera: ${S.facing === "environment" ? "a phone's back camera held by the user." : "a laptop camera facing the user; the user holds objects up to it."}
+Camera: ${S.facing === "environment" ? "a phone's back camera held by the user." : "a laptop or front camera facing the user; the user holds objects up to it."}
 ${langRules()}
 ${SHAPE}`;
 }
@@ -858,243 +1177,439 @@ ${langRules()}
 ${SHAPE}`;
 }
 function estimate() {
-  try { const t = JSON.parse(localStorage.getItem("iris_times") || "[]"); if (t.length) return Math.max(3, Math.round(t.reduce((a, b) => a + b, 0) / t.length)); } catch (e) {}
-  return 12;
+  try { const t = JSON.parse(localStorage.getItem("iris_times") || "[]"); if (t.length) return Math.max(3, Math.min(30, Math.round(t.reduce((a, b) => a + b, 0) / t.length))); } catch (e) {}
+  return 10;
 }
 function saveTime(s) { try { const t = JSON.parse(localStorage.getItem("iris_times") || "[]"); t.push(s); localStorage.setItem("iris_times", JSON.stringify(t.slice(-5))); } catch (e) {} }
 
-// One request to one model. Throws { code: "nokey" | "network" } or a normal error (with .status).
 async function callModel(model, contents, signal) {
   const key = getKey(), body = { contents };
   if (model.startsWith("gemini")) body.generationConfig = { responseMimeType: "application/json" };   // Gemini can force clean JSON
   let url, payload = body;
-  if (key) url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+  if (key) url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
   else if (/^https?:$/.test(location.protocol)) { url = PROXY_URL; payload = { model, ...body }; }
-  else throw Object.assign(new Error("No API key"), { code: "nokey" });
+  else throw Object.assign(new Error("No API key"), { code: "noKey" });
   let res;
   try { res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal }); }
   catch (e) { if (signal.aborted) throw e; throw Object.assign(new Error("Network error"), { code: "network" }); }
-  if (!key && (res.status === 404 || res.status === 405) && url === PROXY_URL) throw Object.assign(new Error("No API key and no server"), { code: "nokey" });
+  if (!key && url === PROXY_URL && (res.status === 404 || res.status === 405)) throw Object.assign(new Error("No API key and no server"), { code: "noKey" });
   let data; try { data = await res.json(); } catch (e) { throw Object.assign(new Error("Bad response (" + res.status + ")"), { status: res.status }); }
   if (!res.ok) throw Object.assign(new Error((data.error && data.error.message) || "Request failed " + res.status), { status: res.status });
   return ((data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [])
     .filter((p) => !p.thought).map((p) => p.text || "").join("");
 }
-// Try the chosen models in order. If one fails (limit reached, busy, bad answer), fall back to the next.
-const cooldown = {};                                   // model → time until which we skip it (after a rate limit)
-async function callAI(contents, signal) {
-  const chain = MODEL_CHAINS[S.model] || MODEL_CHAINS.auto;
-  let lastErr = null;
-  for (let i = 0; i < chain.length; i++) {
-    const model = chain[i], last = i === chain.length - 1;
-    if (!last && cooldown[model] > Date.now()) continue;
-    try {
-      const json = extractJSON(await callModel(model, contents, signal));
-      S.usedModel = model; UI.model();
-      return json;
-    } catch (err) {
-      if (signal.aborted || err.code === "nokey" || err.code === "network") throw err;
-      lastErr = err;
-      if (err.status === 429) cooldown[model] = Date.now() + 60000;
-      if (!last) log("sys", `${MODELS[model]} unavailable (${err.status || "bad answer"}) — switching to ${MODELS[chain[i + 1]]}`);
-    }
-  }
-  throw lastErr || new Error("No model available");
-}
 function extractJSON(out) {
   const s = out.indexOf("{"), e = out.lastIndexOf("}");
-  if (s < 0 || e < 0) throw new Error("The AI did not return the expected format");
+  if (s < 0 || e < 0) throw new Error("The AI did not return JSON");
   return JSON.parse(out.slice(s, e + 1));
 }
-async function ask(contents, follow) {
-  setState("thinking");
-  const est = estimate(), t0 = Date.now();
-  tell(waitPhrase(est, follow));
-  UI.progress(0);
-  const tick = setInterval(() => { UI.progress(Math.min(95, ((Date.now() - t0) / 1000 / est) * 100)); if (!Speech.speaking) Ear.think(); }, 1600);
-  const still = setInterval(() => { if (!Speech.speaking) tell(T.still, { interrupt: false, keepMic: true }); }, 9000);
-  const ctrl = new AbortController(); S.abort = ctrl;
-  const to = setTimeout(() => ctrl.abort(), 60000);
-  try {
-    const json = await callAI(contents, ctrl.signal);
-    S.history = [...contents, { role: "model", parts: [{ text: JSON.stringify(json) }] }];
-    saveTime(Math.round((Date.now() - t0) / 1000));
-    return json;
-  } catch (err) {
-    if (S.state !== "thinking") return null;            // the user said stop
-    setState("idle"); Ear.err(); buzz(200);
-    let said;
-    if (err.code === "nokey") said = tell(T.noKey);
-    else if (err.code === "network") said = tell(T.noNet);
-    else { log("sys", "Error: " + (err.message || err)); said = tell(T.error); }
-    said.then(() => { if (S.state === "idle") { Ear.listen(); Conv.active(); } });
-    return null;
-  } finally { clearInterval(tick); clearInterval(still); clearTimeout(to); S.abort = null; UI.progress(null); }
+const badModels = new Set(), cooldown = {};
+function modelChain() {
+  let c = [...(MODEL_CHAINS[P.model] || MODEL_CHAINS.auto)];
+  if (P.customModel && (P.model === "auto" || P.model === "gemini")) c = [P.customModel, ...c.filter((m) => m !== P.customModel)];
+  return c;
 }
-
-/* ===================== SCREEN (for sighted helpers and demos) ===================== */
-function log(who, text) {
-  if (!text) return;
-  const d = document.createElement("div"); d.className = "line " + who;
-  if (/[؀-ۿ]/.test(text)) d.classList.add("rtl");
-  d.textContent = text; const L = $("log"); L.appendChild(d);
-  while (L.children.length > 40) L.firstChild.remove();
-  L.scrollTop = L.scrollHeight;
-}
-const UI = {
-  state() {
-    const map = {
-      idle: Conv.mode === "sleep"
-        ? ["WAITING", 'Say "Hey IRIS", "Listen" or "Hello" — or tap anywhere on the screen.']
-        : ["LISTENING", 'Speak now: "what is this", "read", "medicine", "money", "around me" — or ask anything.'],
-      aiming: ["AIMING", "Follow the voice and the beeps. IRIS takes the picture by itself."],
-      thinking: ["THINKING", "The AI is looking at the picture…"]
-    };
-    const [a, b] = map[S.state];
-    $("stateText").textContent = S.state === "idle" && !Ears.running && !Ears.want ? "READY" : a;
-    $("stateHint").textContent = b; $("app").dataset.state = S.state; $("app").dataset.conv = Conv.mode;
-    $("hud").textContent = S.state === "aiming" ? "◉ AIMING · " + S.mode.toUpperCase() : S.state === "thinking" ? "◉ ANALYZING"
-      : Conv.mode === "sleep" ? "◌ SAY “HEY IRIS”" : "● LISTENING";
-    $("scanBtn").textContent = S.state === "aiming" ? "CAPTURE NOW" : "SCAN";
-  },
-  speaking(on) { $("app").classList.toggle("speaking", on); },
-  mic(on, blocked) {
-    const p = $("pMic"); p.textContent = blocked ? "MIC BLOCKED" : on ? "🎤 LISTENING" : SR ? "MIC …" : "NO VOICE INPUT";
-    p.className = "pill " + (on ? "on" : blocked || !SR ? "off" : "");
-    $("app").classList.toggle("deaf", !on); UI.state();
-  },
-  model() {
-    const names = { auto: "GEMINI + GEMMA", fast: "FLASH-LITE + GEMMA", gemini: "GEMINI 3.8 FLASH", gemma: "GEMMA 4" };
-    $("modelTag").textContent = S.usedModel ? (MODELS[S.usedModel] || S.usedModel).toUpperCase() : names[S.model] || "";
-  },
-  cam(on) { $("pCam").textContent = on ? "📷 CAMERA ON" : "CAMERA OFF"; $("pCam").className = "pill " + (on ? "on" : "off"); $("camoff").hidden = on; },
-  heard(t) { $("heard").textContent = t ? "🎤 " + t : ""; },
-  tip(t) { $("tip").textContent = t ? "🎯 " + t : ""; },
-  lang() { $("langBtn").textContent = S.lang === "ur" ? "اردو ✓ / EN" : "EN ✓ / اردو"; },
-  flash() { const f = $("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); },
-  snap(url) { const s = $("snap"); s.src = url; s.style.display = "block"; },
-  progress(p) { $("prog").style.width = p == null ? "0" : p + "%"; },
-  meters(m, j) {
-    const light = m.bright < 45 ? '<span class="bad">LIGHT LOW</span>' : '<span class="good">LIGHT OK</span>';
-    const steady = m.motion > 10 ? '<span class="bad">MOVING</span>' : '<span class="good">STEADY</span>';
-    const align = S.mode === "describe" ? "" : `<span class="${j.ok ? "good" : "bad"}">ALIGN ${Math.round(j.score * 100)}%</span>`;
-    $("meters").innerHTML = light + steady + align;
-  },
-  result(r) {
-    const el = $("result"); el.hidden = false; el.innerHTML = "";
-    const urdu = S.lang === "ur";
-    const a = document.createElement("div"); a.className = "answer" + (urdu ? " rtl" : ""); a.textContent = r.answer || ""; el.appendChild(a);
-    const w = (r.warnings || []).filter(Boolean);
-    if (w.length) { const d = document.createElement("div"); d.className = "warn" + (urdu ? " rtl" : ""); d.textContent = "⚠ " + w.join(" · "); el.appendChild(d); }
-    if ((r.details || []).length) {
-      const ul = document.createElement("ul"); if (urdu) ul.className = "rtl";
-      r.details.forEach((x) => { const li = document.createElement("li"); li.textContent = x; ul.appendChild(li); });
-      el.appendChild(ul);
+async function callAI(contents, signal) {
+  const list = modelChain(); let lastErr = null, all429 = true;
+  for (let i = 0; i < list.length; i++) {
+    const model = list[i], last = i === list.length - 1;
+    if (!last && (badModels.has(model) || cooldown[model] > now())) { Dbg.add("AI", "skip " + model); continue; }
+    const t0 = now();
+    Dbg.add("AI", "→ " + model);
+    try {
+      const json = extractJSON(await callModel(model, contents, signal));
+      S.usedModel = model; UI.modelTag();
+      Dbg.add("AI", `✓ ${model} in ${((now() - t0) / 1000).toFixed(1)} s`);
+      return json;
+    } catch (err) {
+      if (signal.aborted || err.code === "noKey" || err.code === "network") throw err;
+      Dbg.add("AI", `✗ ${model}: ${err.status || ""} ${err.message}`);
+      const msg = err.message || "";
+      if ((err.status === 400 && /api key|api_key/i.test(msg)) || err.status === 401 || (err.status === 403 && /api key|api_key/i.test(msg))) throw Object.assign(err, { code: "badKey" });
+      if (err.status === 404) { badModels.add(model); UI.log("sys", `Model “${model}” was not found (404). Open Settings → Check models.`); }
+      if (err.status === 429) cooldown[model] = now() + 60000; else all429 = false;
+      lastErr = err;
+      if (!last) UI.log("sys", `${MODELS[model] || model} unavailable (${err.status || "bad answer"}) — trying ${MODELS[list[i + 1]] || list[i + 1]}`);
     }
   }
-};
-const Overlay = {
-  ctx() {
-    const c = $("ov"), st = $("stage"), dpr = window.devicePixelRatio || 1, W = st.clientWidth, H = st.clientHeight;
-    if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
-    const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H); return { x, W, H };
-  },
-  rect(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); },
-  draw(m, j) {
-    const { x, W, H } = this.ctx(), v = $("video"), sc = Math.min(W / v.videoWidth, H / v.videoHeight);
-    const dw = v.videoWidth * sc, dh = v.videoHeight * sc, ox = (W - dw) / 2, oy = (H - dh) / 2;
-    const X = (u) => ox + u * dw, Y = (u) => oy + u * dh;
-    if (S.mode === "describe") return;
-    x.setLineDash([8, 8]); x.lineWidth = 2; x.strokeStyle = "rgba(255,255,255,.35)";
-    this.rect(x, X(0.3), Y(0.3), dw * 0.4, dh * 0.4, 14); x.stroke(); x.setLineDash([]);
-    if (!m.found) return;
-    const col = j.ok ? "#2ef2a6" : "#ffc83d";
-    x.strokeStyle = col; x.lineWidth = 3; x.shadowColor = col; x.shadowBlur = 12;
-    this.rect(x, X(m.box.x0), Y(m.box.y0), (m.box.x1 - m.box.x0) * dw, (m.box.y1 - m.box.y0) * dh, 10); x.stroke();
-    x.shadowBlur = 0; x.beginPath(); x.moveTo(X(0.5 + m.cx), Y(0.5 + m.cy)); x.lineTo(X(0.5), Y(0.5)); x.stroke();
-    x.fillStyle = col; x.beginPath(); x.arc(X(0.5 + m.cx), Y(0.5 + m.cy), 5, 0, Math.PI * 2); x.fill();
-  },
-  clear() { this.ctx(); }
-};
-
-/* ===================== START ===================== */
-let wakeLock = null;
-async function keepAwake() { try { wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {} }
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && S.started) keepAwake(); });
-
-async function boot() {
-  if (S.started) return; S.started = true;
-  Ear.init();
-  try { speechSynthesis.speak(new SpeechSynthesisUtterance(" ")); } catch (e) {}   // unlock speech on this tap
-  $("starter").hidden = true; $("app").hidden = false;
-  UI.lang(); UI.state(); UI.mic(false); UI.model(); keepAwake();
-  await Speech.ready();
-  await tell(T.starting);
-  await openCamera();
-  if (SR) Ears.start(); else { UI.mic(false); await tell(T.noSR, { interrupt: false }); }
-  if (!getKey() && location.protocol === "file:") await tell(T.noKey, { interrupt: false });
-  await tell(T.welcome, { interrupt: false });
-  if (S.state === "idle") { Ear.listen(); Conv.active(); }
+  if (lastErr && all429) throw Object.assign(lastErr, { code: "quota" });
+  throw lastErr || new Error("No model available");
 }
 
-// One tap anywhere does the most useful thing for the current moment
+/* ===================== 11. FLOWS ===================== */
+async function startScan(mode, q = "") {
+  if (S.state === "capturing" || S.state === "thinking") return Voice.say(T.stillThinking, { queue: true });
+  if (!["ready", "waiting", "aiming", "answering", "error"].includes(S.state)) return;
+  if (!cameraOK() && !(await openCamera())) return;
+  setMode(mode);
+  $("sheet").classList.remove("open");
+  S.pendingQuestion = q; S.history = []; S.retries = 0;
+  const id = ++S.scanId;
+  go("aiming", "scan " + mode);
+  await Voice.say(T.intro[mode]);
+  if (!P.aimHelp && S.scanId === id && S.state === "aiming") { P.aimHelp = true; savePrefs(); await Voice.say(T.aimHelp, { queue: true }); }
+  if (S.scanId === id && S.state === "aiming") Aim.start();
+}
+async function capture(why) {
+  if (S.state !== "aiming") return;
+  const v = $("video"); if (!v.videoWidth) return;
+  Aim.stop(); Voice.cancelAll();
+  go("capturing", why);
+  S.image = toImage(v, v.videoWidth, v.videoHeight); S.imageTime = now();
+  Sound.shutter(); buzz([40, 30, 40]); UI.flash(); UI.snap(S.image.url);
+  UI.log("sys", "📸 picture taken (" + why + ")");
+  const q = S.pendingQuestion; S.pendingQuestion = "";
+  const contents = [{ role: "user", parts: [{ inline_data: { mime_type: S.image.mimeType, data: S.image.base64 } }, { text: firstPrompt(S.mode, q) }] }];
+  const r = await think(contents, why === "timeout" ? "anyway" : "photo");
+  if (!r) return;
+  if (r.retake && S.retries < 2) {
+    S.retries++; S.pendingQuestion = q;
+    const id = S.scanId;
+    go("aiming", "retake " + S.retries);
+    await tell(T.retake); await tell(replySpeech(r), { queue: true });
+    if (S.scanId === id && S.state === "aiming") Aim.start();
+    return;
+  }
+  deliver(r);
+}
+async function followUp(q) {
+  if (!S.image) return startScan("identify", q);
+  const contents = S.history.length
+    ? [...S.history, { role: "user", parts: [{ text: followPrompt(q) }] }]
+    : [{ role: "user", parts: [{ inline_data: { mime_type: S.image.mimeType, data: S.image.base64 } }, { text: firstPrompt(S.mode, q) }] }];
+  Voice.cancelAll();
+  const r = await think(contents, "follow");
+  if (r) { r.retake = false; deliver(r); }
+}
+async function think(contents, kind) {
+  go("thinking", kind);
+  const est = estimate(); S.thinkT0 = now(); S.thinkEst = est;
+  Voice.say(kind === "follow" ? say_follow(est) : kind === "anyway" ? say_anyway(est) : say_got(est));
+  let saidStill = false;
+  const tick = setInterval(() => {
+    UI.render();
+    if (Voice.busy) return;
+    const el = (now() - S.thinkT0) / 1000;
+    if (!saidStill && el > est + 8) { saidStill = true; Voice.say(T.still); } else Sound.tick();
+  }, 1500);
+  const ui = setInterval(() => UI.render(), 500);
+  const ctrl = new AbortController(); S.abort = ctrl; S.abortWhy = "";
+  const to = setTimeout(() => { S.abortWhy = "timeout"; ctrl.abort(); }, AI_TIMEOUT_MS);
+  try {
+    const json = await callAI(contents, ctrl.signal);
+    if (S.state !== "thinking") return null;                 // stopped meanwhile
+    S.history = [...contents, { role: "model", parts: [{ text: JSON.stringify(json) }] }];
+    saveTime(Math.round((now() - S.thinkT0) / 1000));
+    return json;
+  } catch (err) {
+    if (S.abortWhy === "stop" || S.state !== "thinking") { Dbg.add("AI", "cancelled"); return null; }
+    const code = S.abortWhy === "timeout" ? "timeout" : (err.code || "ai");
+    Dbg.add("ERR", code + ": " + (err.message || err));
+    if (code === "ai") UI.log("sys", "Error: " + (err.message || err));
+    fail(code);
+    return null;
+  } finally { clearInterval(tick); clearInterval(ui); clearTimeout(to); S.abort = null; }
+}
+function replySpeech(r) {
+  const w = (r.warnings || []).filter(Boolean);
+  if (P.lang === "ur") return {
+    ur: [w.length ? "خبردار: " + w.join("۔ ") + "۔" : "", r.answer].filter(Boolean).join(" "),
+    hi: r.answer_tts || "", en: r.answer_en || ""
+  };
+  return { en: [w.length ? "Warning: " + w.join(". ") + "." : "", r.answer].filter(Boolean).join(" ") };
+}
+async function deliver(r) {
+  if (document.hidden) { S.pendingAnswer = r; go("paused", "answer arrived while hidden"); return; }
+  S.lastReply = r;
+  go("answering");
+  Sound.success(); buzz(80); UI.answer(r);
+  UI.log("iris", display(replySpeech(r)) || r.answer);
+  await Voice.say(replySpeech(r));
+  if (S.state !== "answering") return;                       // tapped / interrupted
+  if (S.queued) { const q = S.queued; S.queued = ""; return followUp(q); }
+  if (P.hints < 2) { P.hints++; savePrefs(); await Voice.say(T.afterHint, { queue: true }); if (S.state !== "answering") return; }
+  go("ready", "your turn");
+}
+async function fail(code) {
+  S.lastError = code;
+  Voice.cancelAll(); Aim.stop();
+  go("error", code); Sound.error(); buzz(200);
+  await tell(T.err[code] || T.err.ai);
+  if (S.state === "error") go("ready", "after error");
+}
+
+/* ===================== 12. INPUT: tap, double-tap, swipe, hold, keys ===================== */
 function tapAction() {
-  if (S.state === "aiming") return captureNow();
-  if (S.state === "thinking") return tell(T.busy, { keepMic: true });
-  if (!SR || !Ears.want) return startScan(S.mode, "");          // no voice input: a tap scans
-  wake();                                                       // stops IRIS if it's talking, then listens
+  switch (S.state) {
+    case "boot": case "capturing": return;
+    case "aiming": return capture("tap");
+    case "thinking": {
+      const left = Math.max(1, Math.round(S.thinkEst - (now() - S.thinkT0) / 1000));
+      return Voice.say({ en: `Still thinking, about ${left} seconds.`, ur: `ابھی سوچ رہا ہوں، تقریباً ${left} سیکنڈ۔`, hi: `अभी सोच रहा हूं, तक़रीबन ${left} सेकंड।` });
+    }
+    case "answering": case "error": Voice.cancelAll(); return go("ready", "tap");
+    case "paused": return resumeFromPause();
+  }
+  if (Voice.busy) { Voice.cancelAll(); Dbg.add("TAP", "interrupted speech"); return go("ready", "tap interrupt"); }
+  if (!SR || Mic.blocked) return startScan(S.mode, "");       // no voice input: a tap scans
+  wake();
 }
-
-$("starter").addEventListener("click", boot);
+const Touch = { x: 0, y: 0, t: 0, id: null, lp: null, lpFired: false, lastTap: 0, single: null, handledAt: 0 };
+function isControl(e) { return !!e.target.closest("button, input, select, textarea, a, summary, label, dialog, .debug, .chips"); }
+const surface = $("surface");
+surface.addEventListener("pointerdown", (e) => {
+  if (isControl(e)) return;
+  Object.assign(Touch, { x: e.clientX, y: e.clientY, t: now(), id: e.pointerId, lpFired: false });
+  clearTimeout(Touch.lp);
+  Touch.lp = setTimeout(() => { Touch.lpFired = true; buzz(30); Dbg.add("TAP", "hold → repeat"); repeatLast(); }, 650);
+});
+surface.addEventListener("pointermove", (e) => {
+  if (Touch.id !== e.pointerId) return;
+  if (Math.hypot(e.clientX - Touch.x, e.clientY - Touch.y) > 15) clearTimeout(Touch.lp);
+});
+surface.addEventListener("pointercancel", () => { clearTimeout(Touch.lp); Touch.id = null; });
+surface.addEventListener("pointerup", (e) => {
+  if (Touch.id !== e.pointerId) return;
+  Touch.id = null; clearTimeout(Touch.lp);
+  if (Touch.lpFired) { Touch.handledAt = now(); return; }
+  const dx = e.clientX - Touch.x, dy = e.clientY - Touch.y, dt = now() - Touch.t;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 800) { Touch.handledAt = now(); Dbg.add("TAP", "swipe " + (dx < 0 ? "left" : "right")); return cycleMode(dx < 0 ? 1 : -1); }
+  if (Math.abs(dx) < 20 && Math.abs(dy) < 20) { Touch.handledAt = now(); onTap(); }
+});
+// Clicks without a pointer sequence = TalkBack double-tap or keyboard Enter on the surface
+surface.addEventListener("click", (e) => { if (isControl(e) || now() - Touch.handledAt < 600) return; Dbg.add("TAP", "click (screen reader/keyboard)"); tapAction(); });
+function onTap() {
+  const t = now();
+  // Act at once when there's only one sensible meaning (stop talking, take the picture, …)
+  if (Voice.busy || !["ready", "waiting"].includes(S.state)) { Touch.lastTap = t; return tapAction(); }
+  // Ready / waiting: wait briefly to tell a tap (talk) from a double-tap (scan)
+  if (t - Touch.lastTap < 320) { clearTimeout(Touch.single); Touch.lastTap = 0; Dbg.add("TAP", "double-tap → scan"); return startScan(S.mode, ""); }
+  Touch.lastTap = t;
+  clearTimeout(Touch.single);
+  Touch.single = setTimeout(() => { Dbg.add("TAP", "tap"); tapAction(); }, 320);
+}
 document.addEventListener("keydown", (e) => {
-  if (!S.started) { e.preventDefault(); boot(); return; }
+  if (!S.booted) { if (!["Tab", "Shift", "Alt", "Control", "Meta"].includes(e.key)) { e.preventDefault(); boot(); } return; }
   if (e.target.closest("input, textarea, select, dialog")) return;
+  if (e.target.closest("button") && (e.key === " " || e.key === "Enter")) return;   // let real buttons work
   const k = e.key.toLowerCase();
   if (k === " ") { e.preventDefault(); tapAction(); }
-  else if (k === "enter") { e.preventDefault(); S.state === "aiming" ? captureNow() : startScan(S.mode, ""); }
-  else if (k === "r") cmdRepeat();
-  else if (k === "d") cmdDetails();
-  else if (k === "escape") cmdStop();
-  else if (k === "h") cmdHelp();
-  else if (k === "l") setLang(S.lang === "en" ? "ur" : "en");
-  else if ("12345".includes(k) && k) startScan(["identify", "read", "medicine", "money", "describe"][+k - 1], "");
+  else if (k === "enter") { e.preventDefault(); S.state === "aiming" ? capture("key") : startScan(S.mode, ""); }
+  else if (k === "arrowright") cycleMode(1);
+  else if (k === "arrowleft") cycleMode(-1);
+  else if (k === "r") repeatLast();
+  else if (k === "d") speakDetails();
+  else if (k === "escape") stopAll();
+  else if (k === "h") tell(T.help);
+  else if (k === "t") tell(T.tutorial);
+  else if (k === "l") setLang(P.lang === "en" ? "ur" : "en");
+  else if (k === "`") Dbg.toggle();
+  else if ("12345".includes(k) && k) startScan(MODES[+k - 1], "");
 });
 
-// Touch ANYWHERE on the screen (except the helper buttons): tap = talk / capture / stop talking. Hold = repeat last answer.
-(function () {
-  const app = $("app"), skip = (e) => e.target.closest("button, input, select, textarea, dialog, a, label");
-  let lp = null, fired = false;
-  app.addEventListener("pointerdown", (e) => { if (skip(e)) return; fired = false; lp = setTimeout(() => { fired = true; buzz(30); cmdRepeat(); }, 700); });
-  ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => app.addEventListener(ev, () => clearTimeout(lp)));
-  app.addEventListener("click", (e) => { if (skip(e) || fired) return; tapAction(); });
-})();
-$("scanBtn").onclick = () => (S.state === "aiming" ? captureNow() : startScan(S.mode, ""));
-$("repeatBtn").onclick = cmdRepeat;
-$("stopBtn").onclick = cmdStop;
-$("langBtn").onclick = () => setLang(S.lang === "en" ? "ur" : "en");
-document.querySelectorAll(".mode").forEach((b) => (b.onclick = () => startScan(b.dataset.mode, "")));
-function sendTyped() { const v = $("typed").value.trim(); if (!v) return; $("typed").value = ""; log("user", v); handleCommand(v); }
+/* ===================== 13. SCREEN ===================== */
+const UI = {
+  render() {
+    const st = S.state, app = $("app"), speaking = Voice.busy;
+    let orb = st;
+    if (st === "ready") orb = speaking ? "speaking" : Mic.live ? "listening" : "starting";
+    else if (st === "waiting") orb = speaking ? "speaking" : "waiting";
+    else if (st === "answering" || st === "boot") orb = speaking ? "speaking" : "starting";
+    app.dataset.state = st; app.dataset.orb = orb;
+    const micNote = !SR ? "Voice input not supported" : Mic.blocked ? "Microphone blocked — tap to scan" : "";
+    const left = Math.max(0, Math.round(S.thinkEst - (now() - S.thinkT0) / 1000));
+    const V = {
+      boot:      ["Starting", "One moment…", "Starting…", ""],
+      ready:     speaking ? ["Speaking", "Tap anywhere to interrupt.", "Speaking…", ""]
+                 : Mic.live ? ["Listening", "Say “what is this”, “read”, “medicine”, “money”, “around me” — or ask anything.", "Listening…", "Your turn"]
+                 : ["Getting ready", micNote || "Starting the microphone…", micNote ? "Tap to scan" : "Mic starting…", micNote],
+      waiting:   speaking ? ["Speaking", "", "Speaking…", ""] : ["Waiting", "Say “Hey IRIS”, “Listen” or “Hello” — or tap anywhere.", "Say “Hey IRIS”", "or tap anywhere"],
+      aiming:    ["Aiming", "Follow the voice and the beeps. IRIS takes the picture itself. Tap to take it now.", S.lastTip || "Aiming…", T.modeNames[S.mode].en],
+      capturing: ["Got it", "Picture taken.", "Got it", ""],
+      thinking:  ["Thinking", "The AI is looking at the picture. Tap to hear how long.", left > 0 ? `Thinking · ${left}s` : "Almost there…", ""],
+      answering: ["Answer", "Tap anywhere to stop. Hold to hear it again.", "Speaking…", ""],
+      error:     ["Problem", display(T.err[S.lastError] || T.err.ai), "Something went wrong", ""],
+      paused:    ["Paused", "IRIS pauses when the screen is hidden. Come back to continue.", "Paused", ""]
+    }[st] || ["", "", "", ""];
+    $("stateTitle").textContent = V[0]; $("stateHint").textContent = V[1];
+    $("capText").textContent = V[2]; $("capSub").textContent = V[3];
+    $("prog").style.width = st === "thinking" ? Math.min(95, ((now() - S.thinkT0) / 1000 / Math.max(1, S.thinkEst)) * 100) + "%" : "0";
+    const pl = { ready: "Scan", waiting: "Scan", aiming: "Take picture", capturing: "…", thinking: "Cancel", answering: "Stop talking", error: "OK", paused: "Resume", boot: "…" }[st];
+    $("primary").textContent = pl || "Scan";
+    this.mic();
+  },
+  mic() {
+    const p = $("micPill"), t = $("micText");
+    let cls = "", txt;
+    if (!SR) { cls = "bad"; txt = "No voice input"; }
+    else if (Mic.blocked) { cls = "bad"; txt = "Mic blocked"; }
+    else if (Mic.live) { cls = "on"; txt = "Listening"; }
+    else if (Mic.starting) txt = "Mic starting";
+    else if (Voice.busy && LISTEN_STATES.has(S.state)) txt = "Mic paused (IRIS talking)";
+    else txt = "Mic off";
+    p.className = "pill glass " + cls; t.textContent = txt; p.setAttribute("aria-label", "Microphone: " + txt);
+  },
+  cam(on) { $("camoff").hidden = on; $("camoff").textContent = on ? "" : "Camera off"; $("stage").classList.toggle("mirror", on && S.facing === "user"); },
+  heard(t) { $("heard").textContent = t ? "“" + t + "”" : ""; },
+  aim(m, j) {
+    const h = $("aimhud");
+    if (!m) { h.innerHTML = ""; return; }
+    const light = m.bright < 45 ? '<span class="warnc">Light low</span>' : '<span class="ok">Light OK</span>';
+    const steady = m.motion > 10 ? '<span class="warnc">Moving</span>' : '<span class="ok">Steady</span>';
+    const align = S.mode === "describe" ? "" : `<span class="${j.ok ? "ok" : "warnc"}">Aim ${Math.round(j.score * 100)}%</span>`;
+    h.innerHTML = light + steady + align;
+  },
+  flash() { const f = $("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); },
+  snap(url) { const s = $("snap"); s.src = url; s.style.display = "block"; },
+  answer(r) {
+    const body = $("answerBody"), urdu = P.lang === "ur"; body.innerHTML = "";
+    const w = (r.warnings || []).filter(Boolean);
+    if (w.length) { const d = document.createElement("div"); d.className = "warnbox" + (urdu ? " rtl" : ""); d.textContent = "⚠ " + w.join(" · "); body.appendChild(d); }
+    const a = document.createElement("div"); a.className = "answer" + (urdu ? " rtl" : ""); a.textContent = r.answer || ""; body.appendChild(a);
+    if (urdu) { a.lang = "ur"; a.dir = "rtl"; }
+    if ((r.details || []).length) {
+      const ul = document.createElement("ul"); ul.className = "details" + (urdu ? " rtl" : ""); if (urdu) ul.dir = "rtl";
+      r.details.forEach((x) => { const li = document.createElement("li"); li.textContent = x; ul.appendChild(li); });
+      body.appendChild(ul);
+    }
+    $("sheetBtns").hidden = false; $("sheet").classList.add("open");
+    const live = $("srLive"); live.setAttribute("aria-live", P.sr ? "polite" : "off");
+    live.textContent = P.sr ? display(replySpeech(r)) : "";
+  },
+  log(who, text) {
+    if (!text) return;
+    const d = document.createElement("div"); d.className = "line " + who;
+    if (/[؀-ۿ]/.test(text)) { d.classList.add("rtl"); d.dir = "rtl"; }
+    d.textContent = text; const L = $("log"); L.appendChild(d);
+    while (L.children.length > 60) L.firstChild.remove();
+    L.scrollTop = L.scrollHeight;
+  },
+  applyLang() {
+    $("langBtn").textContent = P.lang === "ur" ? "اردو" : "EN";
+    $("langBtn").setAttribute("aria-label", "Language: " + (P.lang === "ur" ? "Urdu" : "English") + ". Tap to switch.");
+    document.documentElement.lang = P.lang === "ur" ? "ur" : "en";
+  },
+  applyContrast() { document.documentElement.classList.toggle("hc", !!P.hc); $("hcBtn").setAttribute("aria-pressed", String(!!P.hc)); },
+  modelTag() {
+    const names = { auto: "Gemini + Gemma", fast: "Flash-Lite + Gemma", gemini: "Gemini", gemma: "Gemma 4 · open-weight" };
+    $("modelTag").textContent = S.usedModel ? (MODELS[S.usedModel] || S.usedModel) : names[P.model] || "";
+  }
+};
+
+// Buttons for helpers
+$("primary").onclick = () => {
+  const st = S.state;
+  if (st === "aiming") return capture("button");
+  if (st === "thinking") return stopAll();
+  if (st === "answering" || st === "error") { Voice.cancelAll(); return go("ready", "button"); }
+  if (st === "paused") return resumeFromPause();
+  if (st === "ready" || st === "waiting") return startScan(S.mode, "");
+};
+$("repeatBtn").onclick = () => repeatLast();
+$("stopBtn").onclick = () => stopAll();
+$("sRepeat").onclick = () => repeatLast();
+$("sDetails").onclick = () => speakDetails();
+$("sClose").onclick = () => $("sheet").classList.remove("open");
+$("langBtn").onclick = () => setLang(P.lang === "en" ? "ur" : "en");
+$("hcBtn").onclick = () => { P.hc = !P.hc; savePrefs(); UI.applyContrast(); };
+document.querySelectorAll(".chip").forEach((b) => (b.onclick = () => { if (S.state === "waiting") go("ready", "chip"); startScan(b.dataset.mode, ""); }));
+function sendTyped() { const v = $("typed").value.trim(); if (!v) return; $("typed").value = ""; handle(v, "typed"); }
 $("sendBtn").onclick = sendTyped;
 $("typed").addEventListener("keydown", (e) => { if (e.key === "Enter") sendTyped(); });
+// 5 taps on the logo opens the debug panel
+(function () { let n = 0, t = 0; $("logo").addEventListener("click", () => { if (now() - t > 3000) n = 0; t = now(); if (++n >= 5) { n = 0; Dbg.toggle(); } }); })();
+$("dbgClose").onclick = () => Dbg.toggle(false);
+$("dbgClear").onclick = () => { Dbg.items = []; Dbg.render(); };
+$("dbgCopy").onclick = () => { try { navigator.clipboard.writeText(Dbg.items.join("\n")); UI.log("sys", "Debug log copied"); } catch (e) {} };
 
-// Helper settings
+/* ===================== 14. SETTINGS DIALOG ===================== */
 $("gear").onclick = () => {
-  $("sKey").value = getKey(); $("sLang").value = S.lang; $("sRate").value = S.rate; $("sModel").value = S.model;
-  const ur = Speech.find("ur"), hi = Speech.find("hi");
+  $("sKey").value = getKey(); $("sModel").value = P.model; $("sCustom").value = P.customModel || ""; $("sLang").value = P.lang;
+  $("sRate").value = P.rate; $("sListen").value = P.listen; $("sCam").value = P.camera; $("sHc").checked = !!P.hc; $("sSr").checked = !!P.sr; $("sDuplex").checked = !!P.duplex;
+  const ur = Voice.find("ur"), hi = Voice.find("hi");
   $("voiceInfo").textContent = "Urdu voice: " + (ur ? ur.name : hi ? "none — using Hindi voice (" + hi.name + ")" : "none on this device") +
-    ". Voice input: " + (SR ? "supported" : "not supported (use Chrome)") + ". Tip: open this page as index.html?key=YOUR_KEY once to save the key.";
+    " · Voice input: " + (SR ? "supported" : "not supported (use Chrome)") + " · Camera: " + S.facing +
+    (location.protocol === "file:" ? " · ⚠ Opened as a local file: Chrome will keep asking for the microphone. Use GitHub Pages or VS Code Live Server." : "") +
+    " · Tip: open index.html?key=YOUR_KEY once to save a key.";
+  $("modelCheck").textContent = "";
   $("settings").showModal();
+};
+$("openDebug").onclick = () => { Dbg.toggle(true); };
+$("checkModels").onclick = async () => {
+  const key = $("sKey").value.trim() || getKey(), out = $("modelCheck");
+  if (!key) { out.textContent = "Add a key first (this check needs a key)."; return; }
+  out.textContent = "Checking…";
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=${encodeURIComponent(key)}`);
+    const data = await res.json();
+    if (!res.ok) { out.textContent = "✗ " + ((data.error && data.error.message) || res.status); return; }
+    const names = (data.models || []).filter((m) => (m.supportedGenerationMethods || []).includes("generateContent")).map((m) => m.name.replace(/^models\//, ""));
+    const ids = [...new Set([...(P.customModel ? [P.customModel] : []), ...Object.keys(MODELS)])];
+    const lines = ids.map((id) => (names.includes(id) ? "✓ " : "✗ ") + id);
+    const extra = names.filter((n) => /gemini|gemma/.test(n) && !ids.includes(n)).slice(0, 14);
+    out.textContent = "Key works.\n" + lines.join("\n") + (extra.length ? "\n\nOther models on this key:\n" + extra.join("\n") : "") +
+      (lines.some((l) => l.startsWith("✗")) ? "\n\nFor a ✗ model, copy a working name into “Custom first model ID”." : "");
+  } catch (e) { out.textContent = "✗ Could not reach Google: " + e.message; }
 };
 $("settings").addEventListener("close", () => {
   if ($("settings").returnValue !== "save") return;
   try { localStorage.setItem("iris_key", $("sKey").value.trim()); } catch (e) {}
-  S.rate = +$("sRate").value; S.model = $("sModel").value; S.usedModel = ""; UI.model(); savePrefs();
-  if ($("sLang").value !== S.lang) setLang($("sLang").value);
-  log("sys", "Settings saved");
+  const oldLang = P.lang;
+  Object.assign(P, { model: $("sModel").value, customModel: $("sCustom").value.trim(), rate: +$("sRate").value, listen: $("sListen").value,
+    camera: $("sCam").value, hc: $("sHc").checked, sr: $("sSr").checked, duplex: $("sDuplex").checked });
+  savePrefs(); badModels.clear(); S.usedModel = ""; UI.modelTag(); UI.applyContrast();
+  if (S.stream) { S.facing = detectFacing(S.stream.getVideoTracks()[0]); UI.cam(true); }
+  if (S.state === "waiting" && P.listen === "always") go("ready", "settings");
+  if (S.state === "ready") Conv.arm();
+  if ($("sLang").value !== oldLang) setLang($("sLang").value);
+  Mic.sync(); UI.log("sys", "Settings saved"); Dbg.add("SET", JSON.stringify(P));
 });
 
-// Test hooks (used for automated testing; harmless otherwise)
-window.IRIS = { S, heard: onHeard, judge, measure, tipFor, T, Speech, isEcho, Conv, Ears, stripWake };
+/* ===================== 15. BOOT + page lifecycle ===================== */
+async function resumeFromPause() {
+  if (!cameraOK()) await openCamera();
+  if (S.pendingAnswer) { const r = S.pendingAnswer; S.pendingAnswer = null; go("ready", "back"); return deliver(r); }
+  go("ready", "back"); Voice.say(T.back);
+}
+document.addEventListener("visibilitychange", () => {
+  if (!S.booted) return;
+  Dbg.add("PAGE", document.hidden ? "hidden" : "visible");
+  if (document.hidden) {
+    if (["ready", "waiting", "aiming", "answering", "error"].includes(S.state)) { Voice.cancelAll(); go("paused", "screen hidden"); }
+    Mic.sync();
+  } else {
+    keepAwake();
+    if (S.state === "paused") resumeFromPause(); else Mic.sync();
+  }
+});
+window.addEventListener("online", () => { Dbg.add("NET", "online"); Mic.backoff = 250; Mic.netWarned = false; Mic.sync(); if (S.state === "ready" && !Voice.busy) Voice.say(T.online); });
+window.addEventListener("offline", () => { Dbg.add("NET", "offline"); if (S.state === "ready" && !Voice.busy) Voice.say(T.offline); });
+let wakeLock = null;
+async function keepAwake() { try { wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {} }
+
+async function boot() {
+  if (S.booted) return; S.booted = true;
+  Sound.init();
+  try { speechSynthesis.speak(new SpeechSynthesisUtterance(" ")); } catch (e) {}     // unlock speech on this tap
+  $("start").hidden = true; $("app").hidden = false;
+  UI.applyLang(); UI.applyContrast(); UI.modelTag(); UI.render(); keepAwake();
+  if (/[?&]debug=1/.test(location.search)) Dbg.toggle(true);
+  await Voice.init();
+  Dbg.add("BOOT", `voice-in:${!!SR} voices:${Voice.voices.length} proto:${location.protocol} key:${!!getKey()} lang:${P.lang}`);
+  if (location.protocol === "file:") UI.log("sys", "Opened as a local file — Chrome will keep asking for the microphone. Use GitHub Pages or VS Code Live Server.");
+  if (!P.introDone) await tell(T.perm);
+  const camOK = await openCamera(true);
+  await tell(P.introDone ? T.introBack : T.introFirst);
+  P.introDone = true; savePrefs();
+  if (!camOK) { Sound.error(); await tell(T.err.camera, { queue: true }); }
+  if (!SR) await tell(T.err.noSR, { queue: true });
+  if (!getKey() && location.protocol === "file:") await tell(T.err.noKey, { queue: true });
+  if (S.state === "boot" || S.state === "error") { go("ready", "boot done"); tell(T.ready); }
+}
+$("start").addEventListener("click", boot);
+
+// Test hooks (used by automated tests; harmless otherwise)
+window.IRIS = { S, P, go, Voice, Mic, Conv, parse, stripWake, judge, measure, tipFor, heard: onHeard, handle, Dbg, T };
 </script>
 </body>
 </html>
