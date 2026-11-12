@@ -265,7 +265,7 @@ html.hc :focus-visible { outline-color: #ffeb3b; box-shadow: none; }
   <header class="topbar">
     <button class="brand" id="logo" aria-label="IRIS">
       <div class="orb" aria-hidden="true"></div>
-      <div><b>IRIS</b><span id="modelTag">Gemini + Gemma</span></div>
+      <div><b>IRIS</b><span id="modelTag">Gemma 4 · open-weight</span></div>
     </button>
     <div class="tools">
       <span class="pill glass" id="micPill" role="status" aria-live="off"><span class="dot"></span><span class="label" id="micText">Mic</span></span>
@@ -385,10 +385,10 @@ html.hc :focus-visible { outline-color: #ffeb3b; box-shadow: none; }
 
     <label for="sModel">AI model</label>
     <select class="field" id="sModel">
-      <option value="auto">Best: Gemini 3.8 Flash → Gemma 4 backup</option>
-      <option value="fast">Fast: Gemini 3.5 Flash-Lite → Gemma 4 backup</option>
+      <option value="gemma">Gemma 4 only — open-weight (default)</option>
+      <option value="auto">Gemini 3.8 Flash → Gemma 4 backup</option>
+      <option value="fast">Gemini 3.5 Flash-Lite → Gemma 4 backup</option>
       <option value="gemini">Gemini 3.8 Flash only</option>
-      <option value="gemma">Gemma 4 only (open-weight)</option>
     </select>
     <label for="sCustom">Custom first model ID (optional — if “Check models” shows a different name)</label>
     <input class="field" id="sCustom" type="text" autocomplete="off" placeholder="e.g. gemini-3.8-flash">
@@ -446,7 +446,11 @@ const MODEL_CHAINS = {                       // tried in order; on failure IRIS 
 };
 const PROXY_URL = "api/generate";            // used when no key is saved and the page is hosted with a server (Vercel)
 const READY_WINDOW_MS = 20000;               // silence before IRIS goes back to waiting for "Hey IRIS"
-const AI_TIMEOUT_MS = 45000;
+const CFG = {
+  firstModelMs: 20000,                       // the first model gets at most 20 s, then the backup takes over
+  aiTotalMs: 70000                           // whole request, all models together
+};
+const AI_TIMEOUT_MS = CFG.aiTotalMs + 3000;  // safety net above the per-model budgets
 const MODES = ["identify", "read", "medicine", "money", "describe"];
 const LISTEN_STATES = new Set(["ready", "waiting", "aiming", "thinking"]);
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -462,9 +466,11 @@ function loadPrefs() {
     return { lang: old.lang, rate: old.rate, model: old.model };
   } catch (e) { return {}; }
 }
-const P = { lang: "en", rate: 1, model: "auto", customModel: "", listen: "auto", camera: "auto",
+const P = { lang: "en", rate: 1, model: "gemma", customModel: "", listen: "auto", camera: "auto",
   hc: false, sr: false, duplex: false, introDone: false, aimHelp: false, hints: 0 };
 for (const [k, v] of Object.entries(loadPrefs())) if (v !== undefined && v !== null) P[k] = v;
+// v2.1: Gemma 4 only is the default for everyone (switches existing installs once; Settings can change it back)
+if (!P.gemmaDefault) { P.model = "gemma"; P.gemmaDefault = true; try { localStorage.setItem("iris2_prefs", JSON.stringify(P)); } catch (e) {} }
 function savePrefs() { try { localStorage.setItem("iris2_prefs", JSON.stringify(P)); } catch (e) {} }
 
 // A helper can set the key with a link once: index.html?key=XXXX (saved, then removed from the address bar)
@@ -1170,11 +1176,18 @@ Camera: ${S.facing === "environment" ? "a phone's back camera held by the user."
 ${langRules()}
 ${SHAPE}`;
 }
-function followPrompt(q) {
-  return `The user asks a follow-up question about the same photo: "${q}"
-Answer it from the photo. Set "retake" to false.
+// Follow-ups are sent as ONE simple request (photo + what IRIS said before + the new question),
+// the same shape as a normal scan. Multi-turn history was the request type that failed on follow-ups.
+function followPrompt(q, prev) {
+  const before = prev ? [prev.answer, ...(prev.details || [])].filter(Boolean).join(" ") : "";
+  return `You are IRIS, the eyes of a blind person in Pakistan. They cannot see this photo; everything you write is read aloud to them.
+${before ? `About this same photo you already told them: "${before}"` : ""}
+Now they ask a follow-up question: "${q}"
+Answer that question from the photo, directly and briefly. Don't repeat what you already said unless it answers the question. If the photo can't answer it, say so honestly.
+Talk to them directly and warmly. Never say "the image shows" or "in the photo". Never guess a name, date or amount you cannot read.
 ${langRules()}
-${SHAPE}`;
+${SHAPE}
+Set "retake" to false.`;
 }
 function estimate() {
   try { const t = JSON.parse(localStorage.getItem("iris_times") || "[]"); if (t.length) return Math.max(3, Math.min(30, Math.round(t.reduce((a, b) => a + b, 0) / t.length))); } catch (e) {}
@@ -1209,30 +1222,44 @@ function modelChain() {
   if (P.customModel && (P.model === "auto" || P.model === "gemini")) c = [P.customModel, ...c.filter((m) => m !== P.customModel)];
   return c;
 }
+// Each model gets its OWN time budget, so a slow first model can never use up the backup's time.
+// A model that fails or is too slow is skipped for 5 minutes, so the next scans go straight to the one that works.
 async function callAI(contents, signal) {
-  const list = modelChain(); let lastErr = null, all429 = true;
+  const list = modelChain(), deadline = now() + CFG.aiTotalMs;
+  let lastErr = null, all429 = true;
   for (let i = 0; i < list.length; i++) {
     const model = list[i], last = i === list.length - 1;
-    if (!last && (badModels.has(model) || cooldown[model] > now())) { Dbg.add("AI", "skip " + model); continue; }
+    if (!last && (badModels.has(model) || cooldown[model] > now())) { Dbg.add("AI", "skip " + model + " (failed recently)"); continue; }
+    const remaining = deadline - now();
+    if (remaining < 3000) break;
+    const budget = last ? remaining : Math.max(5000, Math.min(CFG.firstModelMs, remaining - 15000));
+    const child = new AbortController(), onAbort = () => child.abort();
+    signal.addEventListener("abort", onAbort, { once: true });
+    let tooSlow = false;
+    const tm = setTimeout(() => { tooSlow = true; child.abort(); }, budget);
     const t0 = now();
-    Dbg.add("AI", "→ " + model);
+    Dbg.add("AI", `→ ${model} (up to ${Math.round(budget / 1000)} s)`);
     try {
-      const json = extractJSON(await callModel(model, contents, signal));
+      const json = extractJSON(await callModel(model, contents, child.signal));
       S.usedModel = model; UI.modelTag();
       Dbg.add("AI", `✓ ${model} in ${((now() - t0) / 1000).toFixed(1)} s`);
       return json;
     } catch (err) {
-      if (signal.aborted || err.code === "noKey" || err.code === "network") throw err;
+      if (signal.aborted) throw err;                                   // the user said stop / overall timeout
+      if (tooSlow) err = Object.assign(new Error(`no answer within ${Math.round(budget / 1000)} s`), { status: "slow" });
+      if (err.code === "noKey" || err.code === "network") throw err;
       Dbg.add("AI", `✗ ${model}: ${err.status || ""} ${err.message}`);
       const msg = err.message || "";
       if ((err.status === 400 && /api key|api_key/i.test(msg)) || err.status === 401 || (err.status === 403 && /api key|api_key/i.test(msg))) throw Object.assign(err, { code: "badKey" });
       if (err.status === 404) { badModels.add(model); UI.log("sys", `Model “${model}” was not found (404). Open Settings → Check models.`); }
-      if (err.status === 429) cooldown[model] = now() + 60000; else all429 = false;
+      if (err.status === 429) cooldown[model] = now() + 60000;
+      else { all429 = false; if (!last) cooldown[model] = now() + 5 * 60000; }
       lastErr = err;
-      if (!last) UI.log("sys", `${MODELS[model] || model} unavailable (${err.status || "bad answer"}) — trying ${MODELS[list[i + 1]] || list[i + 1]}`);
-    }
+      if (!last) UI.log("sys", `${MODELS[model] || model} ${err.status === "slow" ? "too slow" : "unavailable"} (${err.status === "slow" ? err.message : err.status || "bad answer"}) — using ${MODELS[list[i + 1]] || list[i + 1]}`);
+    } finally { clearTimeout(tm); signal.removeEventListener("abort", onAbort); }
   }
   if (lastErr && all429) throw Object.assign(lastErr, { code: "quota" });
+  if (lastErr && lastErr.status === "slow") throw Object.assign(lastErr, { code: "timeout" });
   throw lastErr || new Error("No model available");
 }
 
@@ -1274,9 +1301,7 @@ async function capture(why) {
 }
 async function followUp(q) {
   if (!S.image) return startScan("identify", q);
-  const contents = S.history.length
-    ? [...S.history, { role: "user", parts: [{ text: followPrompt(q) }] }]
-    : [{ role: "user", parts: [{ inline_data: { mime_type: S.image.mimeType, data: S.image.base64 } }, { text: firstPrompt(S.mode, q) }] }];
+  const contents = [{ role: "user", parts: [{ inline_data: { mime_type: S.image.mimeType, data: S.image.base64 } }, { text: followPrompt(q, S.lastReply) }] }];
   Voice.cancelAll();
   const r = await think(contents, "follow");
   if (r) { r.retake = false; deliver(r); }
@@ -1296,7 +1321,16 @@ async function think(contents, kind) {
   const ctrl = new AbortController(); S.abort = ctrl; S.abortWhy = "";
   const to = setTimeout(() => { S.abortWhy = "timeout"; ctrl.abort(); }, AI_TIMEOUT_MS);
   try {
-    const json = await callAI(contents, ctrl.signal);
+    let json;
+    try { json = await callAI(contents, ctrl.signal); }
+    catch (err) {
+      // A one-off bad answer or server hiccup: retry once by itself, so the user never has to say "try again"
+      const retryable = !ctrl.signal.aborted && !["noKey", "network", "badKey", "quota"].includes(err.code) && S.state === "thinking";
+      if (!retryable) throw err;
+      Dbg.add("AI", "first attempt failed (" + (err.message || err) + ") — retrying once automatically");
+      for (const m of Object.keys(cooldown)) if (cooldown[m] > now() && modelChain().length === 1) delete cooldown[m];
+      json = await callAI(contents, ctrl.signal);
+    }
     if (S.state !== "thinking") return null;                 // stopped meanwhile
     S.history = [...contents, { role: "model", parts: [{ text: JSON.stringify(json) }] }];
     saveTime(Math.round((now() - S.thinkT0) / 1000));
@@ -1609,7 +1643,7 @@ async function boot() {
 $("start").addEventListener("click", boot);
 
 // Test hooks (used by automated tests; harmless otherwise)
-window.IRIS = { S, P, go, Voice, Mic, Conv, parse, stripWake, judge, measure, tipFor, heard: onHeard, handle, Dbg, T };
+window.IRIS = { CFG, S, P, go, Voice, Mic, Conv, parse, stripWake, judge, measure, tipFor, heard: onHeard, handle, Dbg, T };
 </script>
 </body>
 </html>
